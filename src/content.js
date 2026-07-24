@@ -445,6 +445,53 @@
     });
   }
 
+  /**
+   * Work out the user's own manager ID so the popup never has to ask for it.
+   *
+   * `/api/me/` returns the logged-in manager's entry id, but only when the
+   * session cookie is sent — which is why this runs here in the page's origin
+   * rather than in the service worker. Unauthenticated it answers 200 with
+   * `{"player": null}`, so a logged-out visit simply finds nothing.
+   */
+  function detectManagerId() {
+    var fromUrl = location.pathname.match(/\/entry\/(\d+)\b/);
+    var urlId = fromUrl ? fromUrl[1] : null;
+
+    // Guarded so a missing or throwing fetch cannot take the overlay down with
+    // it — this is a convenience, never a prerequisite.
+    var request;
+    try {
+      request = fetch('/api/me/', {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      });
+    } catch (e) {
+      request = Promise.reject(e);
+    }
+
+    return request
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        // Only `entry` is the team id — `player.id` is a different user id.
+        var entry = data && data.player && data.player.entry;
+        return entry ? String(entry) : urlId;
+      })
+      .catch(function () { return urlId; })
+      .then(function (id) {
+        if (!id) return;
+        chrome.storage.local.get({ settings: {} }, function (items) {
+          var s = items.settings || {};
+          // Never clobber an ID the user typed in themselves — they may be
+          // looking at someone else's team on purpose.
+          if (s.detectedEntryId === id && s.entryId) return;
+          s.detectedEntryId = id;
+          if (!s.entryId) s.entryId = id;
+          chrome.storage.local.set({ settings: s });
+          console.log(TAG, 'manager ID detected: ' + id);
+        });
+      });
+  }
+
   /** Exposed so problems can be diagnosed from the page console. */
   function installDebugHook() {
     window.__fplxp = {
@@ -477,6 +524,15 @@
 
   function start() {
     installDebugHook();
+
+    // Independent of the overlay: the popup still benefits if this succeeds and
+    // the page markup has changed underneath us. Failure here must never stop
+    // the overlay from loading.
+    try {
+      detectManagerId();
+    } catch (e) {
+      console.warn(TAG, 'manager ID detection failed:', e);
+    }
 
     Promise.all([loadSettings(), loadCore()]).then(function (r) {
       var data = r[1];
@@ -514,7 +570,14 @@
 
   chrome.storage.onChanged.addListener(function (changes) {
     if (!changes.settings) return;
-    settings = Object.assign(settings, changes.settings.newValue || {});
+    var next = changes.settings.newValue || {};
+    // Only the display options warrant a redraw; writing a detected manager ID
+    // must not make the whole page flicker.
+    var redraw = ['showXp', 'showFixtures', 'fixtureCount'].some(function (k) {
+      return next[k] !== settings[k];
+    });
+    settings = Object.assign(settings, next);
+    if (!redraw) return;
     clearAnnotations();
     scheduleScan(0);
   });

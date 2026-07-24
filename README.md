@@ -25,12 +25,18 @@ A popup also shows your squad’s xP breakdown and a league‑wide **Top xP** ta
 
   | Tab | What it shows |
   |-----|---------------|
-  | **My squad** | Your 15 players with their modelled xP, next 5 fixtures, and FDR colours. Enter your numeric **manager ID** here — it is remembered for next time. |
+  | **My squad** | Your 15 players with their modelled xP, next 5 fixtures, and FDR colours. Your **manager ID** is filled in automatically — see below. |
   | **Top xP** | The 40 highest‑xP players for the current gameweek, filterable by position and price, sortable by xP or xP per £m. |
   | **Settings** | Toggle the xP badge and fixture strip, change how many fixtures to show, and force‑refresh the cached FPL data. |
 
-> Your manager ID is the number in the URL of your *Points → Gameweek history*
-> page: `https://fantasy.premierleague.com/entry/1234567/history`.
+> **You do not normally need to enter a manager ID.** While you are signed in to
+> FPL, the content script reads it from `/api/me/` and stores it, so the popup is
+> ready the first time you open it. It falls back to an `/entry/<id>/` URL if you
+> are browsing one. You can still type an ID in to inspect someone else's team —
+> a value you enter yourself is never overwritten.
+>
+> The **on-page overlay never needs a manager ID at all**: it reads the players
+> straight from the page.
 
 ---
 
@@ -103,6 +109,7 @@ A popup also shows your squad’s xP breakdown and a league‑wide **Top xP** ta
 | `fixtures/` | All remaining fixtures with difficulties and stats. |
 | `entry/{id}/` | Manager name, favourite team, league info. |
 | `entry/{id}/event/{gw}/picks/` | The 15 players in a manager’s squad for a given gameweek. |
+| `me/` | The signed-in manager’s own entry id, so the popup needs no manual input. Needs the session cookie, so it is called from the content script rather than the service worker; returns `{"player": null}` when signed out. |
 
 ---
 

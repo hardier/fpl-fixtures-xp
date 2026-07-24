@@ -6,7 +6,14 @@
 (function () {
   'use strict';
 
-  var DEFAULT_SETTINGS = { showXp: true, showFixtures: true, fixtureCount: 5, entryId: '' };
+  var DEFAULT_SETTINGS = {
+    showXp: true,
+    showFixtures: true,
+    fixtureCount: 5,
+    entryId: '',
+    // Filled in by the content script from /api/me/ when you visit FPL logged in.
+    detectedEntryId: ''
+  };
 
   var ctx = null;
   var bootstrap = null;
@@ -388,7 +395,14 @@
       settings = Object.assign({}, DEFAULT_SETTINGS, items.settings || {});
       bindSettings();
 
-      $('entry-id').value = settings.entryId || '';
+      // Prefer an ID the user typed; otherwise use the one detected from their
+      // logged-in session, so the common case needs no input at all.
+      var activeId = settings.entryId || settings.detectedEntryId || '';
+      $('entry-id').value = activeId;
+      if (!settings.entryId && settings.detectedEntryId) {
+        $('entry-hint').textContent =
+          'Detected from your signed-in FPL session — nothing to enter.';
+      }
 
       $('entry-form').addEventListener('submit', function (e) {
         e.preventDefault();
@@ -402,11 +416,12 @@
       send({ type: 'core' }).then(function (data) {
         applyCore(data);
         renderTop();
-        if (settings.entryId) {
-          loadSquad(settings.entryId);
+        if (activeId) {
+          loadSquad(activeId);
         } else {
-          $('squad-body').innerHTML =
-            '<p class="empty">Enter your manager ID above to see your squad.</p>';
+          $('squad-body').innerHTML = '<p class="empty">Visit ' +
+            'fantasy.premierleague.com while signed in and your manager ID is ' +
+            'picked up automatically — or enter it above.</p>';
         }
       }).catch(function (err) {
         $('squad-body').textContent = '';
