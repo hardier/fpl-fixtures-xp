@@ -68,10 +68,47 @@ The extension adds a next-5 fixture difficulty strip and an expected-points badg
 
 ### Permission justifications
 
-- **`storage`** – Used solely to remember your display settings and your manager ID locally in your browser. No data is ever sent to any server.
-- **`host_permissions` on `https://fantasy.premierleague.com/*`** – Required to:
-  1. Read the public FPL API (fixtures, player data, squad information) so the extension can calculate fixture difficulty and expected points.
-  2. Inject the overlay (HTML/CSS) onto FPL pages to display the fixture strips and xP badges.
+Paste these verbatim into the two boxes on the Privacy practices tab. Both are
+within the 1,000 character limit.
+
+**`storage` justification**
+
+```
+The extension uses chrome.storage.local for three things, all of which stay in the user's own browser:
+
+1. Display preferences set in the extension popup: whether to show the expected-points badge, whether to show the fixture strip, and how many upcoming fixtures to display.
+
+2. The user's own Fantasy Premier League manager ID, so the popup can show their squad without them having to re-enter it on every visit.
+
+3. A short-lived cache of the public Fantasy Premier League API responses. The main player and team dataset is roughly 1.2 MB, so it is cached for 15 minutes and the fixture list for 60 minutes to avoid re-downloading the same public data on every page load.
+
+Nothing stored is transmitted anywhere. The extension collects no personal information, no browsing history and no credentials.
+```
+
+**Host permission justification**
+
+```
+The extension requests access to https://fantasy.premierleague.com/* only, and needs it for two reasons.
+
+1. Content script injection. The single purpose of the extension is to show each player's upcoming fixture difficulty and an expected-points estimate directly on the Fantasy Premier League site. It therefore has to run on that site in order to read the player names rendered on the page and insert the fixture strip and badge next to them.
+
+2. Reading the public Fantasy Premier League JSON API, which is served from the same host: /api/bootstrap-static/ for players, teams and gameweeks; /api/fixtures/ for the fixture list and its difficulty ratings; /api/entry/{id}/ and /api/entry/{id}/event/{gw}/picks/ for the user's own squad; and /api/me/, which is read solely to obtain the signed-in user's own manager ID so they do not have to look it up and type it in.
+
+No other host is contacted and no data is sent to any third-party server.
+```
+
+### Are you using remote code?
+
+Answer **No**. The package contains no remote code: there is no `eval` and no
+`new Function`, `popup.html` loads only local files, and the only two network
+calls fetch `application/json` from the FPL API. Data returned over the network
+is not remote code. Answering yes would be inaccurate and invites a stricter
+review for something the extension does not do.
+
+A host permission always triggers the "may require an in-depth review" warning.
+That is expected and just means a slower review; `activeTab` is not an
+alternative here, because the extension has to read the FPL API and run on page
+load rather than on a click.
 
 ### Data usage disclosure
 - The extension **collects no personal data** and **transmits nothing to any third party**.
