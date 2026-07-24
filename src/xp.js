@@ -166,14 +166,18 @@
    * 60-minute mark that most bonus categories depend on.
    */
   function minutesModel(player, gamesPlayedByTeam) {
-    // 'u' = unavailable / left the club, 'n' = not in squad, 's' = suspended.
-    if (player.status === 'u' || player.status === 'n' || player.status === 's') {
-      return { xMins: 0, pStart: 0, p60: 0, pAppear: 0 };
-    }
-
     var availability = player.chance_of_playing_next_round;
     availability = (availability === null || availability === undefined) ? 100 : availability;
     availability = clamp(availability / 100, 0, 1);
+
+    // 'u' = unavailable / left the club, 'n' = not in squad, 's' = suspended.
+    // Availability is about FPL's own flags only — never about how much history a
+    // player has, or a new signing with no minutes would look ruled out.
+    var blocked = player.status === 'u' || player.status === 'n' ||
+      player.status === 's' || availability === 0;
+    if (blocked) {
+      return { xMins: 0, pStart: 0, p60: 0, pAppear: 0, available: false };
+    }
 
     var games = Math.max(1, gamesPlayedByTeam || 1);
     var minutes = num(player.minutes);
@@ -192,7 +196,7 @@
     var p60 = clamp(pStart * 0.86 + clamp((xMins - pStart * 82) / 90, 0, 1) * 0.1, 0, 1);
     var pAppear = clamp(pStart + (1 - pStart) * clamp(avgMins / 30, 0, 0.75), 0, 1);
 
-    return { xMins: xMins, pStart: pStart, p60: p60, pAppear: pAppear };
+    return { xMins: xMins, pStart: pStart, p60: p60, pAppear: pAppear, available: true };
   }
 
   // --------------------------------------------------------------- rate model
@@ -432,7 +436,7 @@
       xMins: mins.xMins,
       blank: list.length === 0,
       double: list.length > 1,
-      unavailable: mins.pAppear === 0,
+      unavailable: !mins.available,
       modelXP: 0,
       // ep_this is null outside a live gameweek; ep_next covers the off-season.
       fplEp: num(player.ep_this, num(player.ep_next, NaN)),

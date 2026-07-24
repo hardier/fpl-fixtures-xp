@@ -81,14 +81,14 @@ A popup also shows your squad’s xP breakdown and a league‑wide **Top xP** ta
    - Under **90 minutes** of data: xP = the FPL estimate (scaled for a double gameweek).  
    - 90–450 minutes: linear blend between the model and the scaled FPL estimate.  
    - >450 minutes: fully trust the model.  
-   - Unavailable / suspended / not in squad players score 0 regardless of the blend.
+   - Players FPL flags as out (`status` of `u`/`n`/`s`, or a 0% chance of playing) score 0 regardless of the blend. Availability comes from those flags only — never from how little history a player has, so a new signing with no minutes falls back to the FPL estimate rather than a confident 0.
 
 ---
 
 ## Known limitations
 
 - **FPL does not publish real xP** – this is an estimate based on publicly available data.  
-- **On‑page overlays** depend on the current FPL website markup; if the DOM structure changes the overlay may disappear or degrade gracefully. The popup is unaffected.  
+- **On‑page overlays** depend on FPL's markup. Nothing keys off FPL's hashed class names: the overlay finds player names in text nodes, then walks up to the smallest enclosing element that also carries the card's opponent line (`BOU (H)`), which also verifies *which* player a shared surname refers to. If that shape changes the overlay quietly does nothing rather than misfiring. The popup is unaffected.  
 - **Squad visibility** – the `entry/{id}/event/{gw}/picks/` endpoint only returns data *after* a gameweek has kicked off. Before GW1 the **My squad** tab cannot display anything (it shows a helpful message).  
 - **Authentication** – the extension never calls the `my-team/` endpoint (requires login cookies). The popup only needs your public manager ID.  
 - **Carry‑over last season data** – when no gameweeks have been played and `ep_this` is null, the model relies on `ep_next` and per‑90 rates from the previous season, which may be misleading for newly promoted teams or players who switched clubs.
@@ -127,3 +127,35 @@ node -e '
   console.log("target GW", ctx.targetGw, "| strength ratings usable:", ctx.averages.usable);
 '
 ```
+
+---
+
+## Troubleshooting the overlay
+
+Open DevTools on an FPL page. On load the extension logs:
+
+```
+[FPL xP] ready — target GW1 (run __fplxp.report() to diagnose)
+[FPL xP] annotated 15 player cards
+```
+
+If badges are missing, run `__fplxp.report()` in the console. It returns the
+target gameweek, how many player names were found in the page, how many cards
+were annotated, and a sample showing — for the first few names — which element
+was chosen as the card and whether its opponent line was parsed:
+
+```js
+__fplxp.report()
+// { ready: true, targetGw: 1, nameNodesFound: 15, annotatedNow: 15,
+//   sample: [{ name: "Haaland", cardTag: "DIV.ElementWrap-sc-…",
+//              opponentTokens: [{ short: "bou", venue: "h" }] }] }
+```
+
+- `ready: false` — the FPL API call failed. Check `debug.lastError`, and reload
+  the service worker from `chrome://extensions`.
+- `nameNodesFound: 0` — no player names were recognised in the page text.
+- names found but `annotatedNow: 0` — the cards were located but rejected. An
+  empty `opponentTokens` with no shirt or photo image in the card means there was
+  no evidence the container is a player card.
+
+`__fplxp.rescan()` clears every annotation and re-runs the scan.
