@@ -160,18 +160,27 @@
     return null;
   }
 
-  /** How many distinct players a chunk of text names — used to reject a card
-   *  that actually wraps a whole row of players. */
+  /**
+   * How many players a chunk of text names — used to reject a container that
+   * wraps a whole row of players rather than one card.
+   *
+   * Counts non-overlapping occurrences, longest match first. Counting index keys
+   * instead would double-count a single player, because "gibbs white" also
+   * matches "white" and "b fernandes" also matches "fernandes".
+   */
   function nameMatchCount(norm) {
     var words = norm.split(' ');
-    var seen = {};
-    for (var len = 1; len <= 2; len++) {
-      for (var i = 0; i + len <= words.length; i++) {
-        var key = words.slice(i, i + len).join(' ');
-        if (nameIndex[key]) seen[key] = true;
+    var count = 0;
+    var i = 0;
+
+    while (i < words.length) {
+      var matched = 0;
+      for (var len = Math.min(3, words.length - i); len >= 1; len--) {
+        if (nameIndex[words.slice(i, i + len).join(' ')]) { matched = len; break; }
       }
+      if (matched) { count++; i += matched; } else { i++; }
     }
-    return Object.keys(seen).length;
+    return count;
   }
 
   /**
@@ -192,13 +201,36 @@
         var norm = normalise(text);
         // Never annotate a container holding more than one player.
         if (nameMatchCount(norm) > 1) break;
-        if (opponentTokens(norm).length) return cur;
+        if (opponentTokens(norm).length) return widenToShirt(cur);
         if (!imgFallback && cur.querySelector && cur.querySelector('img')) imgFallback = cur;
       }
       cur = cur.parentElement;
     }
 
     return imgFallback || el.parentElement || el;
+  }
+
+  /**
+   * Grow a card upwards until it also covers the player's shirt.
+   *
+   * The element holding the opponent line is FPL's name plate, which is pure
+   * text — dropping a badge in its corner would sit on top of the player's name.
+   * One or two levels up is the full card including the shirt, where the badge
+   * has empty space to occupy. Stops as soon as a second player comes into
+   * range, so a whole row is never treated as one card.
+   */
+  function widenToShirt(card) {
+    if (card.querySelector && card.querySelector('img')) return card;
+
+    var cur = card.parentElement;
+    for (var i = 0; i < 2 && cur && cur !== document.body; i++) {
+      var text = cardText(cur);
+      if (text === null) break;
+      if (nameMatchCount(normalise(text)) > 1) break;
+      if (cur.querySelector && cur.querySelector('img')) return cur;
+      cur = cur.parentElement;
+    }
+    return card;
   }
 
   /** Resolve a shared name down to one player using everything on the card. */
@@ -289,6 +321,12 @@
           f.difficulty + '): ' + f.points.toFixed(2));
       });
       badge.title = detail.join('\n');
+
+      // A card with no shirt is a bare name plate, so sit the badge just above
+      // it rather than on top of the text.
+      if (!(card.querySelector && card.querySelector('img'))) {
+        badge.classList.add('fplxp-badge--above');
+      }
 
       if (getComputedStyle(card).position === 'static') card.classList.add('fplxp-host');
       card.appendChild(badge);

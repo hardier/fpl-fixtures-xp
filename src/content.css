@@ -21,6 +21,14 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
+/* Fallback for cards that are pure text: lift the badge clear of the name
+   instead of covering it. */
+.fplxp-badge--above {
+  top: auto;
+  bottom: 100%;
+  margin-bottom: 1px;
+}
+
 .fplxp-badge--elite { background: #00ff87; color: #37003c; }
 .fplxp-badge--good  { background: #05f0ff; color: #37003c; }
 .fplxp-badge--ok    { background: #ffffff; color: #37003c; }
