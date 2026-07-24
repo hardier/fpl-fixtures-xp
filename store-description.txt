@@ -1,0 +1,27 @@
+FPL Fixtures & xP adds two things to every player card on fantasy.premierleague.com: a strip of the next 5 fixtures colour-coded by Fixture Difficulty Rating, and a current-gameweek expected-points (xP) estimate shown as a small badge beside the player. Both appear automatically wherever FPL lists your players, with no extra clicks.
+
+What you get on the pitch
+- Fixture strip: each chip is coloured using the same FDR scale that FPL uses. Uppercase means a home fixture, lowercase means away; a blank gameweek shows as a grey dash, and a double gameweek appears as two chips side by side.
+- Hover any fixture chip to see the gameweek, opponent, home or away, and the numeric FDR value.
+- xP badge: a single number representing the extension’s expected-points estimate for the current gameweek, placed neatly on the player card. Hover the badge for a detailed breakdown: per-fixture expected points, expected minutes, FDR, and FPL’s own estimate for comparison.
+- Players FPL has flagged as unavailable are called out in the badge tooltip and score zero xP.
+- The on-page overlay never needs a manager ID. It reads the players straight from the page.
+
+The popup
+Click the toolbar icon for three tabs:
+- My squad – your 15 players are shown grouped into a starting XI and a bench. Each row displays the player’s xP, a mini fixture strip, and any captain or vice-captain designation. Injured and doubtful players are flagged, with FPL's own news text on hover. The captain multiplier is already applied, and the tab shows the total xP for the starting XI and the bench separately.
+- Top xP – the 40 highest-xP players for the current gameweek, filterable by position and price, and sortable by raw xP or by xP per £m.
+- Settings – toggle the on-page xP badge and fixture strip on or off, choose how many fixture chips to show (1 to 8), and force-refresh the cached FPL data.
+
+Your manager ID is detected automatically from your signed-in FPL session, so the popup is ready the first time you open it – nothing to enter. You can still type a different ID to peek at another manager’s team; a manually entered ID is never overwritten.
+
+How expected points are calculated
+FPL does not publish an expected-points figure, so the extension builds its own model from the public data. Expected minutes are derived from a player’s starts and total minutes per team game, scaled by their reported chance of playing. Per-90 rates for expected goals, expected assists, saves, defensive contributions, bonus, and cards are then applied, adjusted by the fixture’s difficulty. Goal expectations are built from the two clubs’ attack and defence strength ratings and home advantage; when those ratings have not yet been populated, the model falls back to the per-fixture FDR. Clean-sheet probability and the one-point-per-two-goals deduction for goalkeepers and defenders are calculated using a Poisson model on expected goals conceded. Double gameweek fixtures are summed, and blank gameweeks score zero. Players with fewer than 90 minutes of data defer entirely to FPL’s own estimate, and those between 90 and 450 minutes are a weighted blend of the model and that estimate. Anyone FPL lists as unavailable (injured, suspended, or not in the squad) scores zero.
+
+This is an estimate, not a prediction, and it is only as good as the underlying public data. The badge should be treated as one extra signal, not a guarantee of points.
+
+Privacy
+All data comes from the public Fantasy Premier League API. The extension collects no personal data, sends nothing to any third-party server, contains no ads or tracking, and uses no remote code. The only things stored are your display preferences and your manager ID – both kept locally in your browser’s storage.
+
+Disclaimer
+This extension is not affiliated with, endorsed by, or connected to the Premier League or Fantasy Premier League in any way.
