@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "FPL Fixtures & xP",
+  "version": "1.0.0",
+  "description": "Adds the next 5 fixtures (colour-coded by FDR) and an expected-points estimate for the current gameweek to every FPL player.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://fantasy.premierleague.com/*"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "FPL Fixtures & xP",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://fantasy.premierleague.com/*"],
+      "js": ["src/xp.js", "src/content.js"],
+      "css": ["src/content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

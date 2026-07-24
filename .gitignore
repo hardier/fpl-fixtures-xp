@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# API snapshots created by the Development section of the README
+bootstrap.json
+fixtures.json
+
+# Packaged extension
+*.zip
+*.crx
+*.pem
+
+# Tooling
+node_modules/
+*.log

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>FPL Fixtures &amp; xP</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="head">
+    <div class="head__title">
+      <strong>FPL Fixtures &amp; xP</strong>
+      <span id="gw" class="head__gw">loading…</span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab tab--active" data-view="squad" role="tab">My squad</button>
+      <button class="tab" data-view="top" role="tab">Top xP</button>
+      <button class="tab" data-view="settings" role="tab">Settings</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="view-squad" class="view">
+      <form id="entry-form" class="row">
+        <input id="entry-id" type="text" inputmode="numeric" placeholder="Manager ID (e.g. 565066)"
+               autocomplete="off" spellcheck="false">
+        <button type="submit">Load</button>
+      </form>
+      <p class="hint">
+        Find your ID in the URL of <em>Points &rarr; Gameweek history</em> on the FPL site:
+        <code>/entry/<b>1234567</b>/history</code>
+      </p>
+      <div id="squad-meta" class="meta"></div>
+      <div id="squad-body"></div>
+    </section>
+
+    <section id="view-top" class="view view--hidden">
+      <div class="row row--filters">
+        <select id="top-pos">
+          <option value="0">All positions</option>
+          <option value="1">Goalkeepers</option>
+          <option value="2">Defenders</option>
+          <option value="3">Midfielders</option>
+          <option value="4">Forwards</option>
+        </select>
+        <select id="top-price">
+          <option value="200">Any price</option>
+          <option value="45">≤ £4.5m</option>
+          <option value="55">≤ £5.5m</option>
+          <option value="70">≤ £7.0m</option>
+          <option value="90">≤ £9.0m</option>
+          <option value="120">≤ £12.0m</option>
+        </select>
+      </div>
+      <div id="top-body"></div>
+    </section>
+
+    <section id="view-settings" class="view view--hidden">
+      <label class="check"><input type="checkbox" id="opt-xp"> Show xP badge on FPL pages</label>
+      <label class="check"><input type="checkbox" id="opt-fix"> Show fixture strip on FPL pages</label>
+      <label class="check check--inline">
+        Fixtures to show
+        <input type="number" id="opt-count" min="1" max="8" step="1">
+      </label>
+      <button id="refresh" class="btn-wide">Refresh FPL data</button>
+      <p class="hint" id="settings-note"></p>
+      <details class="about">
+        <summary>How xP is calculated</summary>
+        <p>
+          FPL does not publish an expected-points figure, so this is our own model.
+          For each fixture in the target gameweek it combines expected minutes
+          (from starts and minutes per team game, scaled by the injury flag) with
+          the player's per-90 rates for xG, xA, saves, defensive contributions,
+          bonus and cards. Goal expectations come from the two clubs' attack and
+          defence strength ratings and home advantage; clean-sheet and
+          goals-conceded terms use a Poisson model on expected goals conceded.
+          Double gameweeks are summed, blanks score zero. Players with under
+          ~5 full games of minutes are blended towards FPL's own
+          <code>ep_this</code> figure.
+        </p>
+      </details>
+    </section>
+  </main>
+
+  <div id="error" class="error error--hidden"></div>
+
+  <script src="xp.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
