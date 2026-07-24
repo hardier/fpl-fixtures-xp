@@ -24,6 +24,8 @@
   var MAX_WALK_UP = 6;
   // Text longer than this cannot be a single player's card.
   var CARD_TEXT_MAX = 160;
+  // Vertical room needed above the name before a corner badge is safe.
+  var BADGE_CLEARANCE = 14;
 
   var ctx = null;
   var nameIndex = null;   // normalised name -> [player, ...]
@@ -299,7 +301,28 @@
     return 'fplxp-badge--low';
   }
 
-  function annotate(card, player) {
+  /**
+   * Is there room above the player's name inside the card for the badge?
+   *
+   * Measured rather than inferred. Which element ends up being the card depends
+   * on markup we do not control: sometimes it is the full card with the shirt on
+   * top (plenty of room), sometimes just FPL's name plate (none at all, so a
+   * corner badge lands on the name). Comparing the name's offset from the card's
+   * top answers that directly, whatever the structure turns out to be.
+   */
+  function hasRoomAboveName(card, nameNode) {
+    var nameEl = nameNode && nameNode.parentElement;
+    if (!nameEl || !card.getBoundingClientRect) return null;
+
+    var cardRect = card.getBoundingClientRect();
+    var nameRect = nameEl.getBoundingClientRect();
+    // Nothing is laid out yet (hidden tab, or a non-visual environment).
+    if (!cardRect.height || !nameRect.height) return null;
+
+    return (nameRect.top - cardRect.top) >= BADGE_CLEARANCE;
+  }
+
+  function annotate(card, player, nameNode) {
     var xp = window.FPLXP.playerXP(ctx, player);
 
     if (settings.showXp) {
@@ -322,11 +345,12 @@
       });
       badge.title = detail.join('\n');
 
-      // A card with no shirt is a bare name plate, so sit the badge just above
-      // it rather than on top of the text.
-      if (!(card.querySelector && card.querySelector('img'))) {
-        badge.classList.add('fplxp-badge--above');
-      }
+      // Sit the badge above the card when the name starts at its top edge,
+      // otherwise it covers the player's name. Falls back to looking for a
+      // shirt image when nothing can be measured.
+      var room = hasRoomAboveName(card, nameNode);
+      if (room === null) room = !!(card.querySelector && card.querySelector('img'));
+      if (!room) badge.classList.add('fplxp-badge--above');
 
       if (getComputedStyle(card).position === 'static') card.classList.add('fplxp-host');
       card.appendChild(badge);
@@ -433,7 +457,7 @@
       if (!hits[i].exact && !looksLikeCard(card)) { debug.cardsRejected++; continue; }
 
       try {
-        annotate(card, resolvePlayer(hits[i].candidates, card));
+        annotate(card, resolvePlayer(hits[i].candidates, card), hits[i].node);
         count++;
       } catch (e) {
         debug.lastError = String(e);

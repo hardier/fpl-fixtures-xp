@@ -21,12 +21,14 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
-/* Fallback for cards that are pure text: lift the badge clear of the name
-   instead of covering it. */
+/* When the name starts at the card's top edge, lift the badge just clear of it
+   so it sits over the shirt above rather than across the player's name. The
+   negative margin keeps it touching the card, so it still reads as belonging to
+   this player and not the one above. */
 .fplxp-badge--above {
   top: auto;
   bottom: 100%;
-  margin-bottom: 1px;
+  margin-bottom: -1px;
 }
 
 .fplxp-badge--elite { background: #00ff87; color: #37003c; }
