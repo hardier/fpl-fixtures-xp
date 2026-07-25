@@ -394,6 +394,57 @@
     return (nameRect.top - cardRect.top) >= BADGE_CLEARANCE;
   }
 
+  /** Nearest ancestor that would clip content escaping the card. */
+  function clippingAncestor(el) {
+    if (typeof getComputedStyle !== 'function') return null;
+    var cur = el.parentElement;
+    while (cur && cur !== document.documentElement) {
+      var s;
+      try {
+        s = getComputedStyle(cur);
+      } catch (e) {
+        return null;
+      }
+      if (s.overflow !== 'visible' || s.overflowY !== 'visible') return cur;
+      cur = cur.parentElement;
+    }
+    return null;
+  }
+
+  /**
+   * The strip sits in the gap below the card by default, which is where there is
+   * room for it and where it reads as belonging to that player.
+   *
+   * FPL's pitch clips that gap in places, though, which left the strip showing as
+   * a two-pixel sliver of colour. So check afterwards whether it actually landed
+   * somewhere visible, and if not, tuck it inside the card just above the name —
+   * over the bottom of the shirt, where nothing can clip it. Measured rather than
+   * assumed, because which ancestor clips is not something we control.
+   */
+  function placeStrip(card, strip, nameNode) {
+    if (!card.getBoundingClientRect) return;
+
+    var cardRect = card.getBoundingClientRect();
+    if (!cardRect.height) return; // nothing laid out; leave the default
+
+    var clip = clippingAncestor(card);
+    if (!clip) return;
+
+    var stripRect = strip.getBoundingClientRect();
+    var clipRect = clip.getBoundingClientRect();
+    if (!clipRect.height) return;
+    // A couple of pixels of tolerance for sub-pixel rounding.
+    if (stripRect.height && stripRect.bottom <= clipRect.bottom + 2) return;
+
+    var nameEl = nameNode && nameNode.parentElement;
+    if (!nameEl) return;
+    var nameRect = nameEl.getBoundingClientRect();
+    if (!nameRect.height) return;
+
+    strip.classList.add('fplxp-strip--inside');
+    strip.style.bottom = Math.max(0, Math.round(cardRect.bottom - nameRect.top + 1)) + 'px';
+  }
+
   function annotate(card, player, nameNode) {
     var xp = window.FPLXP.playerXP(ctx, player);
 
@@ -433,7 +484,11 @@
       strip.className = 'fplxp-strip';
       window.FPLXP.fixtureStrip(ctx, player.team, settings.fixtureCount)
         .forEach(function (chip) { strip.appendChild(makeChip(chip)); });
+
+      if (getComputedStyle(card).position === 'static') card.classList.add('fplxp-host');
+      card.classList.add('fplxp-annot-host');
       card.appendChild(strip);
+      placeStrip(card, strip, nameNode);
     }
 
     card.setAttribute(ANNOTATED, String(player.id));

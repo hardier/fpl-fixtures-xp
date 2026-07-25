@@ -36,13 +36,38 @@
 .fplxp-badge--ok    { background: #ffffff; color: #37003c; }
 .fplxp-badge--low   { background: rgba(55, 0, 60, 0.82); color: #ffffff; }
 
+/* Let the strip escape the card into the gap below it. Only applied to cards we
+   annotate, so FPL's own clipping elsewhere is untouched. */
+.fplxp-annot-host {
+  overflow: visible !important;
+}
+
+/* Absolute, so the strip can never push FPL's own layout around. Sits directly
+   under the card; placeStrip() moves it inside if that would be clipped. */
 .fplxp-strip {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 100%;
+  z-index: 19;
   display: flex;
   flex-wrap: nowrap;
   gap: 1px;
   justify-content: center;
   margin-top: 1px;
   line-height: 1;
+}
+
+/* Tucked over the bottom of the shirt when the gap below is clipped. `bottom` is
+   set from measured geometry in placeStrip(). */
+.fplxp-strip--inside {
+  top: auto;
+  margin-top: 0;
+}
+
+/* Sitting on the kit rather than clean background, so lift the chips off it. */
+.fplxp-strip--inside .fplxp-chip {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
 }
 
 .fplxp-chip {
