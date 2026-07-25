@@ -50,7 +50,11 @@
   var benignTokens = {};  // words allowed to sit beside a player's name
   var photoIndex = null;  // photo id -> player
   var compactNames = [];  // space-free name keys, longest first
-  var settings = { showXp: true, showFixtures: true, fixtureCount: 5 };
+  var settings = {
+    showXp: true, showFixtures: true,
+    showXpList: true, showFixturesList: true,
+    fixtureCount: 5
+  };
   var scheduled = null;
 
   var debug = {
@@ -472,26 +476,38 @@
   }
 
   /**
-   * Keep the strip in the gap below the card, which is where it belongs.
+   * Put the strip under the player without landing on anything else.
    *
-   * FPL's pitch clips that gap in places, which left the strip showing as a
-   * two-pixel sliver of colour. Rather than move it somewhere else, lift the
-   * clipping off the card's ancestors. Only if it is still cut off after that
-   * does it get tucked over the bottom of the shirt, where nothing can clip it.
-   * Measured at each step, because which element clips is not ours to control.
+   * Which placement is right follows from the context, not from trying to measure
+   * free space — on the pitch a card's siblings sit beside it rather than below,
+   * so "is the space under me empty" cannot be answered from the sibling list.
+   *
+   *  - A list of players is stacked with no gap, so the strip goes into normal
+   *    flow and the row grows to fit it. Absolute positioning there covered the
+   *    next player's name.
+   *  - A pitch card has a gap under it, so the strip is absolute and disturbs no
+   *    layout. Any ancestor clipping that gap is released rather than moving it.
+   *
+   * Either way the result is verified, and a card that will neither grow nor let
+   * the strip escape falls back to sitting it inside, above the name.
    */
-  function placeStrip(card, strip, nameNode) {
+  function placeStrip(card, strip, nameNode, inList) {
     if (!card.getBoundingClientRect) return;
 
     var cardRect = card.getBoundingClientRect();
     if (!cardRect.height) return; // nothing laid out; leave the default
 
-    if (!stripIsClipped(card, strip)) return;
+    if (inList) {
+      strip.classList.add('fplxp-strip--flow');
+      if (card.getBoundingClientRect().height > cardRect.height + 1) return; // grew
+      strip.classList.remove('fplxp-strip--flow');
+    } else {
+      if (!stripIsClipped(card, strip)) return;
+      releaseClipping(card);
+      if (!stripIsClipped(card, strip)) return;
+    }
 
-    releaseClipping(card);
-    if (!stripIsClipped(card, strip)) return;
-
-    // Last resort: sit it inside the card, above the name.
+    // Neither worked: sit it inside the card, above the name.
     var nameEl = nameNode && nameNode.parentElement;
     if (!nameEl) return;
     var nameRect = nameEl.getBoundingClientRect();
@@ -501,10 +517,35 @@
     strip.style.bottom = Math.max(0, Math.round(cardRect.bottom - nameRect.top + 1)) + 'px';
   }
 
+  /**
+   * Is this a row in a list of players rather than a card on the pitch?
+   *
+   * Judged by shape, not markup: a pitch card is tall and narrow, a list row is
+   * wide and short. That holds across the player selection dialog, the transfer
+   * list and the pitch without depending on FPL's class names.
+   */
+  function isListRow(card) {
+    if (!card.getBoundingClientRect) return false;
+    var r = card.getBoundingClientRect();
+    if (!r.height || !r.width) return false;
+    return r.width > r.height * 2;
+  }
+
   function annotate(card, player, nameNode) {
     var xp = window.FPLXP.playerXP(ctx, player);
 
-    if (settings.showXp) {
+    // Player lists have their own toggles: they are much denser than the pitch,
+    // so some people want the annotations there and some do not.
+    var inList = isListRow(card);
+    var wantXp = inList ? settings.showXpList : settings.showXp;
+    var wantFixtures = inList ? settings.showFixturesList : settings.showFixtures;
+
+    if (!wantXp && !wantFixtures) {
+      card.setAttribute(ANNOTATED, String(player.id));
+      return;
+    }
+
+    if (wantXp) {
       var badge = document.createElement('div');
       badge.className = 'fplxp-badge ' + xpClass(xp.xp);
       badge.textContent = 'xP ' + xp.xp.toFixed(1);
@@ -535,7 +576,7 @@
       card.appendChild(badge);
     }
 
-    if (settings.showFixtures) {
+    if (wantFixtures) {
       var strip = document.createElement('div');
       strip.className = 'fplxp-strip';
       window.FPLXP.fixtureStrip(ctx, player.team, settings.fixtureCount)
@@ -544,7 +585,7 @@
       if (getComputedStyle(card).position === 'static') card.classList.add('fplxp-host');
       card.classList.add('fplxp-annot-host');
       card.appendChild(strip);
-      placeStrip(card, strip, nameNode);
+      placeStrip(card, strip, nameNode, inList);
     }
 
     card.setAttribute(ANNOTATED, String(player.id));
@@ -873,7 +914,8 @@
     var next = changes.settings.newValue || {};
     // Only the display options warrant a redraw; writing a detected manager ID
     // must not make the whole page flicker.
-    var redraw = ['showXp', 'showFixtures', 'fixtureCount'].some(function (k) {
+    var redraw = ['showXp', 'showFixtures', 'showXpList', 'showFixturesList',
+      'fixtureCount'].some(function (k) {
       return next[k] !== settings[k];
     });
     settings = Object.assign(settings, next);

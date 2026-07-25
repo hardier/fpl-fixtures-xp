@@ -11,7 +11,7 @@ The popup
 Click the toolbar icon for three tabs:
 - My squad – your 15 players are shown grouped into a starting XI and a bench. Each row displays the player’s xP, a mini fixture strip, and any captain or vice-captain designation. Injured and doubtful players are flagged, with FPL's own news text on hover. The captain multiplier is already applied, and the tab shows the total xP for the starting XI and the bench separately.
 - Top xP – the 40 highest-xP players for the current gameweek, filterable by position and price, and sortable by raw xP or by xP per £m.
-- Settings – toggle the on-page xP badge and fixture strip on or off, choose how many fixture chips to show (1 to 8), and force-refresh the cached FPL data.
+- Settings – toggle the xP badge and fixture strip on or off, separately for the pitch and for player lists such as Player Selection and transfers, choose how many fixture chips to show (1 to 8), and force-refresh the cached FPL data.
 
 Your manager ID is detected automatically from your signed-in FPL session, so the popup is ready the first time you open it – nothing to enter. You can still type a different ID to peek at another manager’s team; a manually entered ID is never overwritten.
 

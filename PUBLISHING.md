@@ -1,7 +1,7 @@
 # Publishing to the Chrome Web Store
 
-Checklist for submitting the **FPL Fixtures & xP** extension (v1.0.5) to the Chrome Web Store.  
-The packaged zip is ready at `dist/fpl-fixtures-xp-1.0.5.zip` (34 KB, 14 files).
+Checklist for submitting the **FPL Fixtures & xP** extension (v1.1.0) to the Chrome Web Store.  
+The packaged zip is ready at `dist/fpl-fixtures-xp-1.1.0.zip` (34 KB, 14 files).
 
 ## 1. What you have to do yourself
 
@@ -14,7 +14,7 @@ The packaged zip is ready at `dist/fpl-fixtures-xp-1.0.5.zip` (34 KB, 14 files).
 1. Go to the Chrome Web Store Developer Dashboard:  
    <https://chrome.google.com/webstore/devconsole>
 2. Click **Add new item**.
-3. Upload the zip file `dist/fpl-fixtures-xp-1.0.5.zip`.
+3. Upload the zip file `dist/fpl-fixtures-xp-1.1.0.zip`.
 4. Fill in the listing details (see **Listing copy** below).
 5. Upload the required screenshots (see **Required assets**).
 6. Answer the privacy & permissions questions (see **Privacy and permissions answers**).

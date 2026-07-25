@@ -207,6 +207,23 @@ tbody tr.bench td { border-bottom-style: dotted; }
 
 /* ---------------------------------------------------------------- settings */
 
+.opt-group {
+  margin: 12px 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.opt-group:first-child { margin-top: 0; }
+
+.opt-note {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .check {
   display: block;
   margin-bottom: 8px;

@@ -31,7 +31,7 @@ A popup also shows your squad’s xP breakdown and a league‑wide **Top xP** ta
   |-----|---------------|
   | **My squad** | Your 15 players with their modelled xP, next 5 fixtures, and FDR colours. Your **manager ID** is filled in automatically — see below. |
   | **Top xP** | The 40 highest‑xP players for the current gameweek, filterable by position and price, sortable by xP or xP per £m. |
-  | **Settings** | Toggle the xP badge and fixture strip, change how many fixtures to show, and force‑refresh the cached FPL data. |
+  | **Settings** | Toggle the xP badge and fixture strip separately for the pitch and for player lists (Player Selection, transfers), change how many fixtures to show, and force‑refresh the cached FPL data. |
 
 > **You do not normally need to enter a manager ID.** While you are signed in to
 > FPL, the content script reads it from `/api/me/` and stores it, so the popup is

@@ -9,6 +9,9 @@
   var DEFAULT_SETTINGS = {
     showXp: true,
     showFixtures: true,
+    // Player lists are much denser than the pitch, so they toggle separately.
+    showXpList: true,
+    showFixturesList: true,
     fixtureCount: 5,
     entryId: '',
     // Filled in by the content script from /api/me/ when you visit FPL logged in.
@@ -326,11 +329,15 @@
   function bindSettings() {
     $('opt-xp').checked = settings.showXp;
     $('opt-fix').checked = settings.showFixtures;
+    $('opt-xp-list').checked = settings.showXpList;
+    $('opt-fix-list').checked = settings.showFixturesList;
     $('opt-count').value = settings.fixtureCount;
 
     function persist() {
       settings.showXp = $('opt-xp').checked;
       settings.showFixtures = $('opt-fix').checked;
+      settings.showXpList = $('opt-xp-list').checked;
+      settings.showFixturesList = $('opt-fix-list').checked;
       var n = parseInt($('opt-count').value, 10);
       settings.fixtureCount = isFinite(n) ? Math.min(8, Math.max(1, n)) : 5;
       $('opt-count').value = settings.fixtureCount;
@@ -338,7 +345,7 @@
       if (ctx) { renderTop(); }
     }
 
-    ['opt-xp', 'opt-fix', 'opt-count'].forEach(function (id) {
+    ['opt-xp', 'opt-fix', 'opt-xp-list', 'opt-fix-list', 'opt-count'].forEach(function (id) {
       $(id).addEventListener('change', persist);
     });
 

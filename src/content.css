@@ -65,6 +65,13 @@
   line-height: 1;
 }
 
+/* In normal flow, so a list row grows to fit the strip instead of having the
+   next player's name covered by it. */
+.fplxp-strip--flow {
+  position: static;
+  margin: 1px 0 0;
+}
+
 /* Tucked over the bottom of the shirt when the gap below is clipped. `bottom` is
    set from measured geometry in placeStrip(). */
 .fplxp-strip--inside {
