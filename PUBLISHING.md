@@ -1,7 +1,7 @@
 # Publishing to the Chrome Web Store
 
-Checklist for submitting the **FPL Fixtures & xP** extension (v1.1.0) to the Chrome Web Store.  
-The packaged zip is ready at `dist/fpl-fixtures-xp-1.1.0.zip` (34 KB, 14 files).
+Checklist for submitting the **FPL Squad Selection Helper** extension (v1.1.1) to the Chrome Web Store.  
+The packaged zip is ready at `dist/fpl-squad-selection-helper-1.1.1.zip` (34 KB, 14 files).
 
 ## 1. What you have to do yourself
 
@@ -14,7 +14,7 @@ The packaged zip is ready at `dist/fpl-fixtures-xp-1.1.0.zip` (34 KB, 14 files).
 1. Go to the Chrome Web Store Developer Dashboard:  
    <https://chrome.google.com/webstore/devconsole>
 2. Click **Add new item**.
-3. Upload the zip file `dist/fpl-fixtures-xp-1.1.0.zip`.
+3. Upload the zip file `dist/fpl-squad-selection-helper-1.1.1.zip`.
 4. Fill in the listing details (see **Listing copy** below).
 5. Upload the required screenshots (see **Required assets**).
 6. Answer the privacy & permissions questions (see **Privacy and permissions answers**).
@@ -33,7 +33,7 @@ Adds the next 5 fixtures (colour-coded by FDR) and an expected-points estimate f
 ### Detailed description (~150 words)
 
 ```
-FPL Fixtures & xP enhances your Fantasy Premier League experience directly on the Pick Team page.
+FPL Squad Selection Helper enhances your Fantasy Premier League experience directly on the Pick Team page.
 
 Features:
 • Next-5 fixture strip under every player, colour-coded by the official Fixture Difficulty Rating (dark-green = easy → dark-red = hard). Blanks and double gameweeks are clearly marked.
@@ -129,7 +129,7 @@ load rather than on a click.
 2. Rebuild the zip from the project root:
 
    ```bash
-   zip -r dist/fpl-fixtures-xp-<version>.zip manifest.json src icons README.md -x '*.DS_Store'
+   zip -r dist/fpl-squad-selection-helper-<version>.zip manifest.json src icons README.md -x '*.DS_Store'
    ```
 
 3. Upload the new zip from the Developer Dashboard – each version goes through review again.

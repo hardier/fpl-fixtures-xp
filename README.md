@@ -1,4 +1,4 @@
-# FPL Fixtures & xP – Chrome Extension
+# FPL Squad Selection Helper – Chrome Extension
 
 Adds a next‑5‑fixtures strip colour‑coded by Fixture Difficulty Rating and a current‑gameweek expected‑points (xP) badge to every player on fantasy.premierleague.com.  
 A popup also shows your squad’s xP breakdown and a league‑wide **Top xP** table (requires just your numeric manager ID).

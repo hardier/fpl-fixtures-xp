@@ -1,4 +1,4 @@
-FPL Fixtures & xP adds two things to every player card on fantasy.premierleague.com: a strip of the next 5 fixtures colour-coded by Fixture Difficulty Rating, and a current-gameweek expected-points (xP) estimate shown as a small badge beside the player. Both appear automatically wherever FPL shows your players, with no extra clicks. Pages without player cards, such as league tables, are left untouched.
+FPL Squad Selection Helper adds two things to every player card on fantasy.premierleague.com: a strip of the next 5 fixtures colour-coded by Fixture Difficulty Rating, and a current-gameweek expected-points (xP) estimate shown as a small badge beside the player. Both appear automatically wherever FPL shows your players, with no extra clicks. Pages without player cards, such as league tables, are left untouched.
 
 What you get on the pitch
 - Fixture strip: each chip is coloured using the same FDR scale that FPL uses. Uppercase means a home fixture, lowercase means away; a blank gameweek shows as a grey dash, and a double gameweek appears as two chips side by side.

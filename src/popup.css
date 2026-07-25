@@ -34,14 +34,26 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  gap: 8px;
   padding: 10px 12px 6px;
-  font-size: 14px;
+  font-size: 13px;
+}
+
+/* The title is long enough to crowd the gameweek line, so let it shrink and
+   ellipsize rather than wrap the header onto two lines. */
+.head__title strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .head__gw {
+  flex: 0 0 auto;
   font-size: 11px;
   color: var(--green);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .tabs { display: flex; }
