@@ -28,6 +28,8 @@
   var BADGE_CLEARANCE = 14;
   // Most opponents one card can legitimately show: two, for a double gameweek.
   var MAX_CARD_FIXTURES = 2;
+  // Narrowest a player list row gets; a pitch card stays about shirt-width.
+  var LIST_MIN_WIDTH = 240;
 
   /**
    * Pages to leave alone: league tables are full of managers' real names, and
@@ -476,47 +478,22 @@
   }
 
   /**
-   * Put the strip under the player without landing on anything else.
+   * Put the strip in the gap below a pitch card.
    *
-   * Which placement is right follows from the context, not from trying to measure
-   * free space — on the pitch a card's siblings sit beside it rather than below,
-   * so "is the space under me empty" cannot be answered from the sibling list.
+   * Absolute, so it disturbs no layout. FPL's pitch clips that gap in places,
+   * which showed the strip as a two-pixel sliver, so lift the clipping off the
+   * card's ancestors rather than moving the strip elsewhere. Only if it is still
+   * cut off after that does it get tucked inside above the name, over the bottom
+   * of the shirt.
    *
-   *  - A list of players is stacked with no gap, so the strip goes into normal
-   *    flow and the row grows to fit it. Absolute positioning there covered the
-   *    next player's name.
-   *  - A pitch card has a gap under it, so the strip is absolute and disturbs no
-   *    layout. Any ancestor clipping that gap is released rather than moving it.
-   *
-   * Either way the result is verified, and a card that will neither grow nor let
-   * the strip escape falls back to sitting it inside, above the name.
+   * List rows never come here — they are handled by placeListBar(), because a row
+   * has no gap to use and nothing here would fit one.
    */
-  function placeStrip(card, strip, nameNode, inList) {
+  function placeStrip(card, strip, nameNode) {
     if (!card.getBoundingClientRect) return;
 
     var cardRect = card.getBoundingClientRect();
     if (!cardRect.height) return; // nothing laid out; leave the default
-
-    var nameEl = nameNode && nameNode.parentElement;
-    var nameRect = nameEl && nameEl.getBoundingClientRect();
-
-    if (inList) {
-      // Let the row grow so the strip sits under the player, as it does on the
-      // pitch.
-      strip.classList.add('fplxp-strip--flow');
-      if (card.getBoundingClientRect().height > cardRect.height + 1) return;
-
-      // The row will not grow. Pin the strip to the bottom of it, lined up under
-      // the name. Never the above-the-name placement below: in a short row that
-      // puts the fixtures at the top, which is the opposite of where they sit on
-      // the pitch.
-      strip.classList.remove('fplxp-strip--flow');
-      strip.classList.add('fplxp-strip--bottom');
-      if (nameRect && nameRect.width) {
-        strip.style.left = Math.max(0, Math.round(nameRect.left - cardRect.left)) + 'px';
-      }
-      return;
-    }
 
     if (!stripIsClipped(card, strip)) return;
     releaseClipping(card);
@@ -524,6 +501,8 @@
 
     // A pitch card that will neither grow nor let the strip escape: sit it inside,
     // above the name, over the bottom of the shirt.
+    var nameEl = nameNode && nameNode.parentElement;
+    var nameRect = nameEl && nameEl.getBoundingClientRect();
     if (!nameRect || !nameRect.height) return;
     strip.classList.add('fplxp-strip--inside');
     strip.style.bottom = Math.max(0, Math.round(cardRect.bottom - nameRect.top + 1)) + 'px';
@@ -540,7 +519,10 @@
     if (!card.getBoundingClientRect) return false;
     var r = card.getBoundingClientRect();
     if (!r.height || !r.width) return false;
-    return r.width > r.height * 2;
+    // Aspect ratio alone is not enough: a pitch card's name plate is also wider
+    // than it is tall. A list row additionally spans the panel it is in, where a
+    // pitch card stays about the width of a shirt.
+    return r.width >= LIST_MIN_WIDTH && r.width > r.height * 2;
   }
 
   function annotate(card, player, nameNode) {
@@ -557,8 +539,14 @@
       return;
     }
 
+    if (getComputedStyle(card).position === 'static') card.classList.add('fplxp-host');
+    card.classList.add('fplxp-annot-host');
+
+    var badge = null;
+    var strip = null;
+
     if (wantXp) {
-      var badge = document.createElement('div');
+      badge = document.createElement('div');
       badge.className = 'fplxp-badge ' + xpClass(xp.xp);
       badge.textContent = 'xP ' + xp.xp.toFixed(1);
 
@@ -576,31 +564,79 @@
           f.difficulty + '): ' + f.points.toFixed(2));
       });
       badge.title = detail.join('\n');
-
-      // Sit the badge above the card when the name starts at its top edge,
-      // otherwise it covers the player's name. Falls back to looking for a
-      // shirt image when nothing can be measured.
-      var room = hasRoomAboveName(card, nameNode);
-      if (room === null) room = !!(card.querySelector && card.querySelector('img'));
-      if (!room) badge.classList.add('fplxp-badge--above');
-
-      if (getComputedStyle(card).position === 'static') card.classList.add('fplxp-host');
-      card.appendChild(badge);
     }
 
     if (wantFixtures) {
-      var strip = document.createElement('div');
+      strip = document.createElement('div');
       strip.className = 'fplxp-strip';
       window.FPLXP.fixtureStrip(ctx, player.team, settings.fixtureCount)
         .forEach(function (chip) { strip.appendChild(makeChip(chip)); });
+    }
 
-      if (getComputedStyle(card).position === 'static') card.classList.add('fplxp-host');
-      card.classList.add('fplxp-annot-host');
-      card.appendChild(strip);
-      placeStrip(card, strip, nameNode, inList);
+    if (inList) {
+      placeListBar(card, badge, strip, nameNode);
+    } else {
+      if (badge) {
+        // Sit the badge above the card when the name starts at its top edge,
+        // otherwise it covers the player's name. Falls back to looking for a
+        // shirt image when nothing can be measured.
+        var room = hasRoomAboveName(card, nameNode);
+        if (room === null) room = !!(card.querySelector && card.querySelector('img'));
+        if (!room) badge.classList.add('fplxp-badge--above');
+        card.appendChild(badge);
+      }
+      if (strip) {
+        card.appendChild(strip);
+        placeStrip(card, strip, nameNode);
+      }
     }
 
     card.setAttribute(ANNOTATED, String(player.id));
+  }
+
+  /**
+   * In a list row, put the xP and the fixtures on one line under the player's
+   * name — in space made for them.
+   *
+   * A row is short and already full: FPL prints the club and position under the
+   * name, the price and points to the right. Overlaying anything covers real
+   * content, and lifting the badge above the row pushes it into the row before,
+   * which is how the fixtures ended up over "Arsenal GKP" and the badge ended up
+   * beside the section heading.
+   *
+   * So grow the row by the height of the bar and put the bar in the space that
+   * creates. The growth is a min-height derived from the row's own measured
+   * height, which works whether or not its height was otherwise fixed, and is
+   * undone by clearAnnotations().
+   */
+  function placeListBar(card, badge, strip, nameNode) {
+    var bar = document.createElement('div');
+    bar.className = 'fplxp-bar';
+    if (badge) {
+      badge.classList.add('fplxp-badge--inline');
+      bar.appendChild(badge);
+    }
+    if (strip) {
+      strip.classList.add('fplxp-strip--inbar');
+      bar.appendChild(strip);
+    }
+    card.appendChild(bar);
+
+    if (!card.getBoundingClientRect) return;
+    var cardRect = card.getBoundingClientRect();
+    if (!cardRect.height) return;
+
+    var barHeight = bar.getBoundingClientRect().height || 13;
+    card.classList.add('fplxp-grown');
+    card.style.minHeight = Math.ceil(cardRect.height + barHeight + 2) + 'px';
+
+    // Line the bar up with the name rather than the row's left edge, which is
+    // usually an info icon or a shirt.
+    var nameEl = nameNode && nameNode.parentElement;
+    var nameRect = nameEl && nameEl.getBoundingClientRect();
+    if (nameRect && nameRect.width) {
+      bar.style.left = Math.max(0, Math.round(nameRect.left - cardRect.left)) + 'px';
+    }
   }
 
   // --------------------------------------------------------------------- scan
@@ -764,8 +800,13 @@
     document.querySelectorAll('[' + ANNOTATED + ']').forEach(function (el) {
       el.removeAttribute(ANNOTATED);
     });
+    document.querySelectorAll('.fplxp-bar').forEach(function (el) { el.remove(); });
+    document.querySelectorAll('.fplxp-grown').forEach(function (el) {
+      el.style.minHeight = '';
+    });
+
     // Hand FPL's own styling back, so switching the overlay off leaves no trace.
-    ['fplxp-host', 'fplxp-annot-host', 'fplxp-unclip'].forEach(function (cls) {
+    ['fplxp-host', 'fplxp-annot-host', 'fplxp-unclip', 'fplxp-grown'].forEach(function (cls) {
       document.querySelectorAll('.' + cls).forEach(function (el) {
         el.classList.remove(cls);
       });

@@ -65,30 +65,6 @@
   line-height: 1;
 }
 
-/* In normal flow, so a list row grows to fit the strip instead of having the
-   next player's name covered by it. */
-.fplxp-strip--flow {
-  position: static;
-  margin: 1px 0 0;
-}
-
-/* Pinned to the bottom of a list row that will not grow, lined up under the
-   player's name. `left` comes from measured geometry in placeStrip(). */
-.fplxp-strip--bottom {
-  top: auto;
-  bottom: 1px;
-  right: auto;
-  margin-top: 0;
-  justify-content: flex-start;
-}
-
-.fplxp-strip--bottom .fplxp-chip {
-  flex: 0 0 auto;
-  min-width: 22px;
-  padding-left: 2px;
-  padding-right: 2px;
-}
-
 /* Tucked over the bottom of the shirt when the gap below is clipped. `bottom` is
    set from measured geometry in placeStrip(). */
 .fplxp-strip--inside {
@@ -123,4 +99,44 @@
 /* A double gameweek gets an underline so two chips for one GW are readable. */
 .fplxp-chip--double {
   box-shadow: inset 0 -2px 0 rgba(55, 0, 60, 0.6);
+}
+
+/* ---------------------------------------------------------------- list rows */
+
+/* One line under the player's name holding the xP and the fixtures. Sits in
+   space the row is grown to make, so it never covers FPL's own club and
+   position line. `left` is set from measured geometry in placeListBar(). */
+.fplxp-bar {
+  position: absolute;
+  left: 0;
+  bottom: 1px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1;
+  pointer-events: auto;
+}
+
+.fplxp-badge--inline {
+  position: static;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  box-shadow: none;
+}
+
+.fplxp-strip--inbar {
+  position: static;
+  margin: 0;
+  justify-content: flex-start;
+}
+
+/* Chips size to their label in a row rather than stretching across a card. */
+.fplxp-strip--inbar .fplxp-chip {
+  flex: 0 0 auto;
+  min-width: 22px;
+  padding-left: 3px;
+  padding-right: 3px;
 }
