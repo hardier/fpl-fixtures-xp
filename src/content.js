@@ -28,17 +28,19 @@
   var BADGE_CLEARANCE = 14;
 
   /**
-   * Pages that show player cards. Everywhere else on the site is left alone —
-   * league tables in particular are full of managers' real names, and FPL has
-   * players called King, Kevin and Henry, so scanning them produced badges on
-   * people rather than footballers.
+   * Pages to leave alone: league tables are full of managers' real names, and
+   * FPL has players called King, Kevin and Henry.
+   *
+   * Deliberately a denylist rather than a list of allowed pages. An allowlist
+   * silently disables the overlay anywhere the URL is not what we guessed, which
+   * is a worse failure than the one it prevents — the per-card evidence check
+   * below is what actually stops wrong annotations.
    */
-  var PLAYER_PAGES = [
-    /^\/my-team/,
-    /^\/transfers/,
-    /^\/squad-selection/,
-    /^\/statistics/,
-    /^\/entry\/\d+\/event\/\d+/
+  var PAGE_DENYLIST = [
+    /^\/leagues/,
+    /standings/,
+    /^\/help/,
+    /^\/entry\/\d+\/history/
   ];
 
   var ctx = null;
@@ -236,13 +238,50 @@
         var norm = normalise(text);
         // Never annotate a container holding more than one player.
         if (nameMatchCount(norm) > 1) break;
-        if (opponentTokens(norm).length) return widenToShirt(cur);
-        if (!imgFallback && cur.querySelector && cur.querySelector('img')) imgFallback = cur;
+        // Evidence is recorded here, where it was actually seen. Re-deriving it
+        // from the widened card is unreliable: widening can change what text is
+        // in scope, losing the very opponent line that identified the card.
+        if (opponentTokens(norm).length) {
+          return { card: widenToShirt(cur), evidence: 'opponent' };
+        }
+        if (!imgFallback && playerImageEvidence(cur)) imgFallback = cur;
       }
       cur = cur.parentElement;
     }
 
-    return imgFallback || el.parentElement || el;
+    if (imgFallback) return { card: imgFallback, evidence: 'image' };
+    return { card: el.parentElement || el, evidence: null };
+  }
+
+  /**
+   * A shirt or player photo, which only appears on real player cards. A generic
+   * <img> is not enough — league tables carry badges and avatars too.
+   */
+  function playerImageEvidence(el) {
+    return shirtTeamCodes(el).length > 0 || !!photoPlayer(el) || hasKitBackground(el);
+  }
+
+  /**
+   * A kit or photo applied as a CSS background rather than an <img>.
+   *
+   * Checked because FPL renders kits this way in places, which is why anchoring
+   * on <img> alone missed them. Bounded to a handful of descendants, since
+   * getComputedStyle is not free and a player card is small.
+   */
+  function hasKitBackground(el) {
+    if (!el.querySelectorAll || typeof getComputedStyle !== 'function') return false;
+
+    var nodes = [el].concat(Array.prototype.slice.call(el.querySelectorAll('*'), 0, 12));
+    for (var i = 0; i < nodes.length; i++) {
+      var bg;
+      try {
+        bg = getComputedStyle(nodes[i]).backgroundImage;
+      } catch (e) {
+        continue;
+      }
+      if (bg && /shirt|kit|photos\/players/i.test(bg)) return true;
+    }
+    return false;
   }
 
   /**
@@ -493,21 +532,12 @@
     return hits;
   }
 
-  /** Does this container actually look like a player card? */
-  function looksLikeCard(card) {
-    var norm = normalise(cardText(card) || '');
-    if (opponentTokens(norm).length) return true;
-    if (shirtTeamCodes(card).length) return true;
-    if (photoPlayer(card)) return true;
-    return false;
-  }
-
   function onPlayerPage() {
     var path = location.pathname;
-    for (var i = 0; i < PLAYER_PAGES.length; i++) {
-      if (PLAYER_PAGES[i].test(path)) return true;
+    for (var i = 0; i < PAGE_DENYLIST.length; i++) {
+      if (PAGE_DENYLIST[i].test(path)) return false;
     }
-    return false;
+    return true;
   }
 
   function scan() {
@@ -517,7 +547,10 @@
     // A single-page app changes route without reloading, so this is checked on
     // every scan rather than once at startup.
     if (!onPlayerPage()) {
-      debug.skippedPage = location.pathname;
+      if (debug.skippedPage !== location.pathname) {
+        debug.skippedPage = location.pathname;
+        console.log(TAG, 'skipping ' + location.pathname + ' (not a player page)');
+      }
       clearAnnotations();
       return 0;
     }
@@ -528,14 +561,15 @@
     var count = 0;
 
     for (var i = 0; i < hits.length; i++) {
-      var card = findCard(hits[i].node);
-      if (!card || alreadyHandled(card)) { debug.cardsRejected++; continue; }
+      var found = findCard(hits[i].node);
+      if (!found || alreadyHandled(found.card)) { debug.cardsRejected++; continue; }
 
       // Every match needs corroboration that this really is a player card, an
       // exact one included: managers share names with players (Harry Kane, Chris
       // Wood), so an exact hit on a league table row is still the wrong thing to
       // annotate. A genuine card carries an opponent line, a shirt or a photo.
-      if (!looksLikeCard(card)) { debug.cardsRejected++; continue; }
+      if (!found.evidence) { debug.cardsRejected++; continue; }
+      var card = found.card;
 
       try {
         annotate(card, resolvePlayer(hits[i].candidates, card), hits[i].node);
@@ -643,10 +677,13 @@
       report: function () {
         var hits = ctx ? findNameNodes() : [];
         var sample = hits.slice(0, 5).map(function (h) {
-          var card = findCard(h.node);
+          var found = findCard(h.node);
+          var card = found && found.card;
           return {
             name: h.node.nodeValue.trim(),
             candidates: h.candidates.length,
+            exact: h.exact,
+            evidence: found ? found.evidence : null,
             cardTag: card ? card.tagName + '.' + (card.className || '').split(' ')[0] : null,
             cardText: card ? (card.textContent || '').slice(0, 60) : null,
             opponentTokens: card ? opponentTokens(normalise(cardText(card) || '')) : []
