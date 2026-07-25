@@ -27,8 +27,23 @@
   // Vertical room needed above the name before a corner badge is safe.
   var BADGE_CLEARANCE = 14;
 
+  /**
+   * Pages that show player cards. Everywhere else on the site is left alone —
+   * league tables in particular are full of managers' real names, and FPL has
+   * players called King, Kevin and Henry, so scanning them produced badges on
+   * people rather than footballers.
+   */
+  var PLAYER_PAGES = [
+    /^\/my-team/,
+    /^\/transfers/,
+    /^\/squad-selection/,
+    /^\/statistics/,
+    /^\/entry\/\d+\/event\/\d+/
+  ];
+
   var ctx = null;
   var nameIndex = null;   // normalised name -> [player, ...]
+  var benignTokens = {};  // words allowed to sit beside a player's name
   var photoIndex = null;  // photo id -> player
   var compactNames = [];  // space-free name keys, longest first
   var settings = { showXp: true, showFixtures: true, fixtureCount: 5 };
@@ -40,6 +55,7 @@
     annotated: 0,
     nameHits: 0,
     cardsRejected: 0,
+    skippedPage: null,
     lastError: null
   };
 
@@ -58,6 +74,21 @@
   function buildIndexes(bootstrap) {
     nameIndex = {};
     photoIndex = {};
+    benignTokens = {};
+
+    // Words that legitimately sit next to a player's name on a card: their club,
+    // their position, and the home/away marker. Anything else alongside a name
+    // means we are probably not looking at a player at all.
+    bootstrap.teams.forEach(function (t) {
+      benignTokens[normalise(t.short_name)] = true;
+      benignTokens[normalise(t.name)] = true;
+    });
+    (bootstrap.element_types || []).forEach(function (p) {
+      if (p.singular_name_short) benignTokens[normalise(p.singular_name_short)] = true;
+    });
+    ['sub', 'gk', 'gkp', 'def', 'mid', 'fwd', 'xp', 'pts'].forEach(function (t) {
+      benignTokens[t] = true;
+    });
 
     bootstrap.elements.forEach(function (p) {
       [p.web_name, p.second_name, p.first_name + ' ' + p.second_name].forEach(function (raw) {
@@ -156,7 +187,9 @@
     var imgs = el.querySelectorAll ? el.querySelectorAll('img') : [];
     for (var i = 0; i < imgs.length; i++) {
       var src = imgs[i].getAttribute('src') || '';
-      var m = src.match(/\/p(\d+)\.(?:png|jpg|jpeg|webp)/);
+      // Anchored to FPL's player-photo path: a bare /p<digits>.png pattern
+      // matches plenty of unrelated assets.
+      var m = src.match(/photos\/players\/[^/]*\/p(\d+)\.(?:png|jpg|jpeg|webp)/);
       if (m && photoIndex[m[1]]) return photoIndex[m[1]];
     }
     return null;
@@ -384,6 +417,28 @@
    * really is a player card before acting on it. That keeps short UI labels which
    * happen to contain a surname ("Rice", "Wood") from being annotated.
    */
+  /**
+   * Is every word left over after removing the player's name something that
+   * belongs on a player card?
+   *
+   * This is what separates "Haaland MCI" and "Raya £6.0m" from "Bernard King".
+   * FPL first names include King, Kevin and Henry, so a league table full of
+   * managers' real names would otherwise match players constantly. A club,
+   * position, price or venue marker beside a name is expected; a second personal
+   * name is not.
+   */
+  function leftoverIsBenign(tokens) {
+    for (var i = 0; i < tokens.length; i++) {
+      var tok = tokens[i];
+      if (!tok) continue;
+      if (benignTokens[tok]) continue;
+      if (/^\d/.test(tok)) continue;    // rank, price, "6m"
+      if (tok.length === 1) continue;   // H/A venue, C/V armband, £ remnants
+      return false;
+    }
+    return true;
+  }
+
   function matchName(raw) {
     var norm = normalise(raw);
     if (!norm) return null;
@@ -395,16 +450,22 @@
     for (var len = Math.min(3, words.length); len >= 1; len--) {
       for (var i = 0; i + len <= words.length; i++) {
         var key = words.slice(i, i + len).join(' ');
-        if (nameIndex[key]) return { candidates: nameIndex[key], exact: false };
+        if (!nameIndex[key]) continue;
+        var rest = words.slice(0, i).concat(words.slice(i + len));
+        if (!leftoverIsBenign(rest)) continue;
+        return { candidates: nameIndex[key], exact: false };
       }
     }
 
-    // Nothing separated the name from what follows it.
+    // Nothing separated the name from what follows it, e.g. "RayaARS".
     var compact = norm.replace(/ /g, '');
     for (var c = 0; c < compactNames.length; c++) {
-      if (compact.indexOf(compactNames[c].compact) !== -1) {
-        return { candidates: nameIndex[compactNames[c].key], exact: false };
-      }
+      var cn = compactNames[c];
+      var at = compact.indexOf(cn.compact);
+      if (at === -1) continue;
+      var remainder = (compact.slice(0, at) + compact.slice(at + cn.compact.length));
+      if (remainder && !benignTokens[remainder] && !/^\d/.test(remainder)) continue;
+      return { candidates: nameIndex[cn.key], exact: false };
     }
     return null;
   }
@@ -441,9 +502,26 @@
     return false;
   }
 
+  function onPlayerPage() {
+    var path = location.pathname;
+    for (var i = 0; i < PLAYER_PAGES.length; i++) {
+      if (PLAYER_PAGES[i].test(path)) return true;
+    }
+    return false;
+  }
+
   function scan() {
     if (!ctx) return 0;
     debug.scans++;
+
+    // A single-page app changes route without reloading, so this is checked on
+    // every scan rather than once at startup.
+    if (!onPlayerPage()) {
+      debug.skippedPage = location.pathname;
+      clearAnnotations();
+      return 0;
+    }
+    debug.skippedPage = null;
 
     var hits = findNameNodes();
     debug.nameHits = hits.length;
@@ -453,8 +531,11 @@
       var card = findCard(hits[i].node);
       if (!card || alreadyHandled(card)) { debug.cardsRejected++; continue; }
 
-      // A partial name match needs corroboration before we trust it.
-      if (!hits[i].exact && !looksLikeCard(card)) { debug.cardsRejected++; continue; }
+      // Every match needs corroboration that this really is a player card, an
+      // exact one included: managers share names with players (Harry Kane, Chris
+      // Wood), so an exact hit on a league table row is still the wrong thing to
+      // annotate. A genuine card carries an opponent line, a shirt or a photo.
+      if (!looksLikeCard(card)) { debug.cardsRejected++; continue; }
 
       try {
         annotate(card, resolvePlayer(hits[i].candidates, card), hits[i].node);
@@ -573,6 +654,8 @@
         });
         return {
           ready: debug.ready,
+          onPlayerPage: onPlayerPage(),
+          path: location.pathname,
           targetGw: ctx && ctx.targetGw,
           nameNodesFound: hits.length,
           annotatedNow: document.querySelectorAll('[' + ANNOTATED + ']').length,
