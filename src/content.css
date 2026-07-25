@@ -72,6 +72,23 @@
   margin: 1px 0 0;
 }
 
+/* Pinned to the bottom of a list row that will not grow, lined up under the
+   player's name. `left` comes from measured geometry in placeStrip(). */
+.fplxp-strip--bottom {
+  top: auto;
+  bottom: 1px;
+  right: auto;
+  margin-top: 0;
+  justify-content: flex-start;
+}
+
+.fplxp-strip--bottom .fplxp-chip {
+  flex: 0 0 auto;
+  min-width: 22px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
 /* Tucked over the bottom of the shirt when the gap below is clipped. `bottom` is
    set from measured geometry in placeStrip(). */
 .fplxp-strip--inside {

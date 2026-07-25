@@ -497,22 +497,34 @@
     var cardRect = card.getBoundingClientRect();
     if (!cardRect.height) return; // nothing laid out; leave the default
 
+    var nameEl = nameNode && nameNode.parentElement;
+    var nameRect = nameEl && nameEl.getBoundingClientRect();
+
     if (inList) {
+      // Let the row grow so the strip sits under the player, as it does on the
+      // pitch.
       strip.classList.add('fplxp-strip--flow');
-      if (card.getBoundingClientRect().height > cardRect.height + 1) return; // grew
+      if (card.getBoundingClientRect().height > cardRect.height + 1) return;
+
+      // The row will not grow. Pin the strip to the bottom of it, lined up under
+      // the name. Never the above-the-name placement below: in a short row that
+      // puts the fixtures at the top, which is the opposite of where they sit on
+      // the pitch.
       strip.classList.remove('fplxp-strip--flow');
-    } else {
-      if (!stripIsClipped(card, strip)) return;
-      releaseClipping(card);
-      if (!stripIsClipped(card, strip)) return;
+      strip.classList.add('fplxp-strip--bottom');
+      if (nameRect && nameRect.width) {
+        strip.style.left = Math.max(0, Math.round(nameRect.left - cardRect.left)) + 'px';
+      }
+      return;
     }
 
-    // Neither worked: sit it inside the card, above the name.
-    var nameEl = nameNode && nameNode.parentElement;
-    if (!nameEl) return;
-    var nameRect = nameEl.getBoundingClientRect();
-    if (!nameRect.height) return;
+    if (!stripIsClipped(card, strip)) return;
+    releaseClipping(card);
+    if (!stripIsClipped(card, strip)) return;
 
+    // A pitch card that will neither grow nor let the strip escape: sit it inside,
+    // above the name, over the bottom of the shirt.
+    if (!nameRect || !nameRect.height) return;
     strip.classList.add('fplxp-strip--inside');
     strip.style.bottom = Math.max(0, Math.round(cardRect.bottom - nameRect.top + 1)) + 'px';
   }
