@@ -17,9 +17,13 @@ A popup also shows your squad’s xP breakdown and a league‑wide **Top xP** ta
 
 ## Usage
 
-- **Overlay** – visit `https://fantasy.premierleague.com` (any page).  
-  Every player card gets an xP badge in its top‑right corner and a colour‑coded
-  fixture strip along the bottom. Hover either one for a breakdown.
+- **Overlay** – visit `https://fantasy.premierleague.com`.  
+  Every player card gets an xP badge and a colour‑coded fixture strip along the
+  bottom. Hover either one for a breakdown. Both positions are measured at
+  runtime rather than fixed: the badge takes the card's top‑right corner when
+  there is room above the player's name and sits just above the card otherwise,
+  and the strip stays in the gap below the card, lifting any clipping that would
+  cut it off.
 - **Popup** – click the toolbar icon.  
   The popup has three tabs:
 
@@ -87,14 +91,30 @@ A popup also shows your squad’s xP breakdown and a league‑wide **Top xP** ta
    - Under **90 minutes** of data: xP = the FPL estimate (scaled for a double gameweek).  
    - 90–450 minutes: linear blend between the model and the scaled FPL estimate.  
    - >450 minutes: fully trust the model.  
-   - Players FPL flags as out (`status` of `u`/`n`/`s`, or a 0% chance of playing) score 0 regardless of the blend. Availability comes from those flags only — never from how little history a player has, so a new signing with no minutes falls back to the FPL estimate rather than a confident 0.
+   - Players FPL flags as out (`status` of `u`/`n`/`s`, or a 0% chance of playing)
+     score 0 regardless of the blend. Availability comes from those flags only —
+     never from how little history a player has, so a new signing with no minutes
+     falls back to the FPL estimate rather than a confident 0. That is why such a
+     player shows a small non-zero xP rather than zero.
 
 ---
 
 ## Known limitations
 
 - **FPL does not publish real xP** – this is an estimate based on publicly available data.  
-- **On‑page overlays** depend on FPL's markup. Nothing keys off FPL's hashed class names: the overlay finds player names in text nodes, then walks up to the smallest enclosing element that also carries the card's opponent line (`BOU (H)`), which also verifies *which* player a shared surname refers to. If that shape changes the overlay quietly does nothing rather than misfiring. The popup is unaffected.  
+- **On‑page overlays** depend on FPL's markup. Nothing keys off FPL's hashed class
+  names: the overlay finds player names in text nodes, then walks up to the
+  smallest enclosing element that also carries the card's opponent line
+  (`BOU (H)`), which also verifies *which* player a shared surname refers to.
+  Every match must be corroborated by something only a real card has — an
+  opponent line, a shirt, a player photo, or a kit set as a CSS background —
+  and a partial match additionally requires the words beside the name to be a
+  club, position, price or venue marker. That is what keeps managers' names out
+  of it: FPL has players whose first names are King, Kevin and Henry, so
+  "Bernard King" in a league table would otherwise match a player. Pages with no
+  player cards (leagues, standings, `/help`, `/entry/<id>/history`) are skipped
+  outright. If the markup changes shape the overlay quietly does nothing rather
+  than misfiring. The popup is unaffected.  
 - **Squad visibility** – the `entry/{id}/event/{gw}/picks/` endpoint only returns data *after* a gameweek has kicked off. Before GW1 the **My squad** tab cannot display anything (it shows a helpful message).  
 - **Authentication** – the extension never calls the `my-team/` endpoint (requires login cookies). The popup only needs your public manager ID.  
 - **Carry‑over last season data** – when no gameweeks have been played and `ep_this` is null, the model relies on `ep_next` and per‑90 rates from the previous season, which may be misleading for newly promoted teams or players who switched clubs.
@@ -153,16 +173,20 @@ was chosen as the card and whether its opponent line was parsed:
 
 ```js
 __fplxp.report()
-// { ready: true, targetGw: 1, nameNodesFound: 15, annotatedNow: 15,
-//   sample: [{ name: "Haaland", cardTag: "DIV.ElementWrap-sc-…",
+// { ready: true, onPlayerPage: true, path: "/my-team", targetGw: 1,
+//   nameNodesFound: 15, annotatedNow: 15,
+//   sample: [{ name: "Haaland", exact: true, evidence: "opponent",
+//              cardTag: "DIV.ElementWrap-sc-…",
 //              opponentTokens: [{ short: "bou", venue: "h" }] }] }
 ```
 
 - `ready: false` — the FPL API call failed. Check `debug.lastError`, and reload
   the service worker from `chrome://extensions`.
+- `onPlayerPage: false` — the page is on the skip list. The console also logs
+  `skipping <path> (not a player page)` once per route.
 - `nameNodesFound: 0` — no player names were recognised in the page text.
 - names found but `annotatedNow: 0` — the cards were located but rejected. An
-  empty `opponentTokens` with no shirt or photo image in the card means there was
-  no evidence the container is a player card.
+  `evidence` of `null` means nothing marked that container out as a player card:
+  no opponent line, no shirt, no photo and no kit background.
 
 `__fplxp.rescan()` clears every annotation and re-runs the scan.

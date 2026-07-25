@@ -411,15 +411,51 @@
     return null;
   }
 
+  /** Is the strip currently being cut off by an ancestor that clips? */
+  function stripIsClipped(card, strip) {
+    var clip = clippingAncestor(card);
+    if (!clip) return false;
+
+    var clipRect = clip.getBoundingClientRect();
+    var stripRect = strip.getBoundingClientRect();
+    if (!clipRect.height || !stripRect.height) return false;
+    // A couple of pixels of tolerance for sub-pixel rounding.
+    return stripRect.bottom > clipRect.bottom + 2;
+  }
+
   /**
-   * The strip sits in the gap below the card by default, which is where there is
-   * room for it and where it reads as belonging to that player.
+   * Stop the card's ancestors clipping the gap the strip sits in.
    *
-   * FPL's pitch clips that gap in places, though, which left the strip showing as
-   * a two-pixel sliver of colour. So check afterwards whether it actually landed
-   * somewhere visible, and if not, tuck it inside the card just above the name —
-   * over the bottom of the shirt, where nothing can clip it. Measured rather than
-   * assumed, because which ancestor clips is not something we control.
+   * Bounded to a few levels so this cannot switch off clipping for half the page.
+   * Reversed by clearAnnotations(), so nothing is left behind if the overlay is
+   * turned off.
+   */
+  function releaseClipping(card) {
+    if (typeof getComputedStyle !== 'function') return;
+
+    var cur = card.parentElement;
+    for (var i = 0; i < 4 && cur && cur !== document.body; i++) {
+      var s;
+      try {
+        s = getComputedStyle(cur);
+      } catch (e) {
+        return;
+      }
+      if (s.overflow !== 'visible' || s.overflowY !== 'visible') {
+        cur.classList.add('fplxp-unclip');
+      }
+      cur = cur.parentElement;
+    }
+  }
+
+  /**
+   * Keep the strip in the gap below the card, which is where it belongs.
+   *
+   * FPL's pitch clips that gap in places, which left the strip showing as a
+   * two-pixel sliver of colour. Rather than move it somewhere else, lift the
+   * clipping off the card's ancestors. Only if it is still cut off after that
+   * does it get tucked over the bottom of the shirt, where nothing can clip it.
+   * Measured at each step, because which element clips is not ours to control.
    */
   function placeStrip(card, strip, nameNode) {
     if (!card.getBoundingClientRect) return;
@@ -427,15 +463,12 @@
     var cardRect = card.getBoundingClientRect();
     if (!cardRect.height) return; // nothing laid out; leave the default
 
-    var clip = clippingAncestor(card);
-    if (!clip) return;
+    if (!stripIsClipped(card, strip)) return;
 
-    var stripRect = strip.getBoundingClientRect();
-    var clipRect = clip.getBoundingClientRect();
-    if (!clipRect.height) return;
-    // A couple of pixels of tolerance for sub-pixel rounding.
-    if (stripRect.height && stripRect.bottom <= clipRect.bottom + 2) return;
+    releaseClipping(card);
+    if (!stripIsClipped(card, strip)) return;
 
+    // Last resort: sit it inside the card, above the name.
     var nameEl = nameNode && nameNode.parentElement;
     if (!nameEl) return;
     var nameRect = nameEl.getBoundingClientRect();
@@ -653,6 +686,12 @@
     });
     document.querySelectorAll('[' + ANNOTATED + ']').forEach(function (el) {
       el.removeAttribute(ANNOTATED);
+    });
+    // Hand FPL's own styling back, so switching the overlay off leaves no trace.
+    ['fplxp-host', 'fplxp-annot-host', 'fplxp-unclip'].forEach(function (cls) {
+      document.querySelectorAll('.' + cls).forEach(function (el) {
+        el.classList.remove(cls);
+      });
     });
   }
 

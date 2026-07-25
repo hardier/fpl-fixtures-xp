@@ -42,6 +42,13 @@
   overflow: visible !important;
 }
 
+/* Applied to the few ancestors that would otherwise clip the gap under a card.
+   Added only when the strip is measured as actually being cut off, and removed
+   again when annotations are cleared. */
+.fplxp-unclip {
+  overflow: visible !important;
+}
+
 /* Absolute, so the strip can never push FPL's own layout around. Sits directly
    under the card; placeStrip() moves it inside if that would be clipped. */
 .fplxp-strip {
