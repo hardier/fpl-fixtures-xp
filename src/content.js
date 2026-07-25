@@ -26,6 +26,8 @@
   var CARD_TEXT_MAX = 160;
   // Vertical room needed above the name before a corner badge is safe.
   var BADGE_CLEARANCE = 14;
+  // Most opponents one card can legitimately show: two, for a double gameweek.
+  var MAX_CARD_FIXTURES = 2;
 
   /**
    * Pages to leave alone: league tables are full of managers' real names, and
@@ -152,6 +154,19 @@
     return out;
   }
 
+  /**
+   * Is this text nothing but opponent labels, e.g. "TOT (H)"?
+   *
+   * Such text must never be read as a player's name. "TOT (H)" normalises to
+   * "tot h", which with the spaces removed is "toth" — the surname Tóth, so FPL's
+   * own fixture labels were matching a player and getting annotated.
+   */
+  function isOpponentLabel(norm) {
+    if (!opponentTokens(norm).length) return false;
+    var stripped = norm.replace(/\b[a-z]{3} [ha]\b/g, ' ').replace(/\s+/g, ' ').trim();
+    return stripped === '';
+  }
+
   /** Real fixtures for this player in the target gameweek, as "bou h" tokens. */
   function playerFixtureTokens(player) {
     var list = (ctx.byTeamGw[player.team] || {})[ctx.targetGw] || [];
@@ -238,10 +253,18 @@
         var norm = normalise(text);
         // Never annotate a container holding more than one player.
         if (nameMatchCount(norm) > 1) break;
+
+        // A player card shows one opponent, or two in a double gameweek. Three or
+        // more means this is a fixtures list, not a card — FPL's player dialog has
+        // a GW1/GW2/GW3 grid, and annotating it put a badge and strip on top of
+        // FPL's own difficulty row. Ancestors only accumulate more, so stop here.
+        var tokens = opponentTokens(norm);
+        if (tokens.length > MAX_CARD_FIXTURES) break;
+
         // Evidence is recorded here, where it was actually seen. Re-deriving it
         // from the widened card is unreliable: widening can change what text is
         // in scope, losing the very opponent line that identified the card.
-        if (opponentTokens(norm).length) {
+        if (tokens.length) {
           return { card: widenToShirt(cur), evidence: 'opponent' };
         }
         if (!imgFallback && playerImageEvidence(cur)) imgFallback = cur;
@@ -569,6 +592,7 @@
   function matchName(raw) {
     var norm = normalise(raw);
     if (!norm) return null;
+    if (isOpponentLabel(norm)) return null;
 
     if (nameIndex[norm]) return { candidates: nameIndex[norm], exact: true };
 
