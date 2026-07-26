@@ -30,6 +30,8 @@
   var MAX_CARD_FIXTURES = 2;
   // Narrowest a player list row gets; a pitch card stays about shirt-width.
   var LIST_MIN_WIDTH = 240;
+  // Tallest a player list row gets; a pitch row is far deeper than this.
+  var LIST_MAX_HEIGHT = 120;
 
   /**
    * Pages to leave alone: league tables are full of managers' real names, and
@@ -515,22 +517,44 @@
    * wide and short. That holds across the player selection dialog, the transfer
    * list and the pitch without depending on FPL's class names.
    */
-  function isListRow(card) {
-    if (!card.getBoundingClientRect) return false;
-    var r = card.getBoundingClientRect();
-    if (!r.height || !r.width) return false;
-    // Aspect ratio alone is not enough: a pitch card's name plate is also wider
-    // than it is tall. A list row additionally spans the panel it is in, where a
-    // pitch card stays about the width of a shirt.
-    return r.width >= LIST_MIN_WIDTH && r.width > r.height * 2;
+  /**
+   * The list row this card belongs to, or null if it is not in a list.
+   *
+   * Searches upwards rather than testing the card itself: the element the name
+   * resolves to is often just the name-and-club block, a couple of hundred pixels
+   * wide, while the row around it spans the whole panel. Testing only the card
+   * classified those as pitch cards, so the badge got the pitch treatment and
+   * floated up into the row above.
+   *
+   * A row is short, much wider than it is tall, wide in absolute terms — a pitch
+   * card's name plate is wide and short too, but stays about shirt-width — and
+   * covers exactly one player, which is what rules out a whole pitch row.
+   */
+  function findListRow(card) {
+    if (!card.getBoundingClientRect) return null;
+
+    var el = card;
+    for (var i = 0; i < 3 && el && el !== document.body; i++) {
+      var r = el.getBoundingClientRect();
+      if (r.height && r.height <= LIST_MAX_HEIGHT &&
+          r.width >= LIST_MIN_WIDTH && r.width > r.height * 2) {
+        var text = cardText(el);
+        if (text === null || nameMatchCount(normalise(text)) <= 1) return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
   }
 
   function annotate(card, player, nameNode) {
     var xp = window.FPLXP.playerXP(ctx, player);
 
     // Player lists have their own toggles: they are much denser than the pitch,
-    // so some people want the annotations there and some do not.
-    var inList = isListRow(card);
+    // so some people want the annotations there and some do not. The bar is
+    // attached to the row rather than the card, which may be only the name block.
+    var row = findListRow(card);
+    var inList = !!row;
+    var host = row || card;
     var wantXp = inList ? settings.showXpList : settings.showXp;
     var wantFixtures = inList ? settings.showFixturesList : settings.showFixtures;
 
@@ -539,8 +563,8 @@
       return;
     }
 
-    if (getComputedStyle(card).position === 'static') card.classList.add('fplxp-host');
-    card.classList.add('fplxp-annot-host');
+    if (getComputedStyle(host).position === 'static') host.classList.add('fplxp-host');
+    host.classList.add('fplxp-annot-host');
 
     var badge = null;
     var strip = null;
@@ -574,7 +598,7 @@
     }
 
     if (inList) {
-      placeListBar(card, badge, strip, nameNode);
+      placeListBar(row, badge, strip, nameNode);
     } else {
       if (badge) {
         // Sit the badge above the card when the name starts at its top edge,
@@ -609,7 +633,7 @@
    * height, which works whether or not its height was otherwise fixed, and is
    * undone by clearAnnotations().
    */
-  function placeListBar(card, badge, strip, nameNode) {
+  function placeListBar(row, badge, strip, nameNode) {
     var bar = document.createElement('div');
     bar.className = 'fplxp-bar';
     if (badge) {
@@ -620,22 +644,22 @@
       strip.classList.add('fplxp-strip--inbar');
       bar.appendChild(strip);
     }
-    card.appendChild(bar);
+    row.appendChild(bar);
 
-    if (!card.getBoundingClientRect) return;
-    var cardRect = card.getBoundingClientRect();
-    if (!cardRect.height) return;
+    if (!row.getBoundingClientRect) return;
+    var rowRect = row.getBoundingClientRect();
+    if (!rowRect.height) return;
 
     var barHeight = bar.getBoundingClientRect().height || 13;
-    card.classList.add('fplxp-grown');
-    card.style.minHeight = Math.ceil(cardRect.height + barHeight + 2) + 'px';
+    row.classList.add('fplxp-grown');
+    row.style.minHeight = Math.ceil(rowRect.height + barHeight + 2) + 'px';
 
     // Line the bar up with the name rather than the row's left edge, which is
     // usually an info icon or a shirt.
     var nameEl = nameNode && nameNode.parentElement;
     var nameRect = nameEl && nameEl.getBoundingClientRect();
     if (nameRect && nameRect.width) {
-      bar.style.left = Math.max(0, Math.round(nameRect.left - cardRect.left)) + 'px';
+      bar.style.left = Math.max(0, Math.round(nameRect.left - rowRect.left)) + 'px';
     }
   }
 
