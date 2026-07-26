@@ -24,8 +24,6 @@
   var MAX_WALK_UP = 6;
   // Text longer than this cannot be a single player's card.
   var CARD_TEXT_MAX = 160;
-  // Vertical room needed above the name before a corner badge is safe.
-  var BADGE_CLEARANCE = 14;
   // Most opponents one card can legitimately show: two, for a double gameweek.
   var MAX_CARD_FIXTURES = 2;
   // Narrowest a player list row gets; a pitch card stays about shirt-width.
@@ -404,26 +402,6 @@
     return 'fplxp-badge--low';
   }
 
-  /**
-   * Is there room above the player's name inside the card for the badge?
-   *
-   * Measured rather than inferred. Which element ends up being the card depends
-   * on markup we do not control: sometimes it is the full card with the shirt on
-   * top (plenty of room), sometimes just FPL's name plate (none at all, so a
-   * corner badge lands on the name). Comparing the name's offset from the card's
-   * top answers that directly, whatever the structure turns out to be.
-   */
-  function hasRoomAboveName(card, nameNode) {
-    var nameEl = nameNode && nameNode.parentElement;
-    if (!nameEl || !card.getBoundingClientRect) return null;
-
-    var cardRect = card.getBoundingClientRect();
-    var nameRect = nameEl.getBoundingClientRect();
-    // Nothing is laid out yet (hidden tab, or a non-visual environment).
-    if (!cardRect.height || !nameRect.height) return null;
-
-    return (nameRect.top - cardRect.top) >= BADGE_CLEARANCE;
-  }
 
   /** Nearest ancestor that would clip content escaping the card. */
   function clippingAncestor(el) {
@@ -442,16 +420,16 @@
     return null;
   }
 
-  /** Is the strip currently being cut off by an ancestor that clips? */
-  function stripIsClipped(card, strip) {
+  /** Is the bar currently being cut off by an ancestor that clips? */
+  function barIsClipped(card, bar) {
     var clip = clippingAncestor(card);
     if (!clip) return false;
 
     var clipRect = clip.getBoundingClientRect();
-    var stripRect = strip.getBoundingClientRect();
-    if (!clipRect.height || !stripRect.height) return false;
+    var barRect = bar.getBoundingClientRect();
+    if (!clipRect.height || !barRect.height) return false;
     // A couple of pixels of tolerance for sub-pixel rounding.
-    return stripRect.bottom > clipRect.bottom + 2;
+    return barRect.bottom > clipRect.bottom + 2;
   }
 
   /**
@@ -480,7 +458,7 @@
   }
 
   /**
-   * Put the strip in the gap below a pitch card.
+   * Put the bar in the gap below a pitch card.
    *
    * Absolute, so it disturbs no layout. FPL's pitch clips that gap in places,
    * which showed the strip as a two-pixel sliver, so lift the clipping off the
@@ -489,25 +467,25 @@
    * of the shirt.
    *
    * List rows never come here — they are handled by placeListBar(), because a row
-   * has no gap to use and nothing here would fit one.
+   * has no gap to use.
    */
-  function placeStrip(card, strip, nameNode) {
+  function placeBar(card, bar, nameNode) {
     if (!card.getBoundingClientRect) return;
 
     var cardRect = card.getBoundingClientRect();
     if (!cardRect.height) return; // nothing laid out; leave the default
 
-    if (!stripIsClipped(card, strip)) return;
+    if (!barIsClipped(card, bar)) return;
     releaseClipping(card);
-    if (!stripIsClipped(card, strip)) return;
+    if (!barIsClipped(card, bar)) return;
 
     // A pitch card that will neither grow nor let the strip escape: sit it inside,
     // above the name, over the bottom of the shirt.
     var nameEl = nameNode && nameNode.parentElement;
     var nameRect = nameEl && nameEl.getBoundingClientRect();
     if (!nameRect || !nameRect.height) return;
-    strip.classList.add('fplxp-strip--inside');
-    strip.style.bottom = Math.max(0, Math.round(cardRect.bottom - nameRect.top + 1)) + 'px';
+    bar.classList.add('fplxp-bar--inside');
+    bar.style.bottom = Math.max(0, Math.round(cardRect.bottom - nameRect.top + 1)) + 'px';
   }
 
   /**
@@ -597,22 +575,27 @@
         .forEach(function (chip) { strip.appendChild(makeChip(chip)); });
     }
 
+    // One element holding both, always. They used to be placed separately, and
+    // every remaining overlap came from the badge getting a different answer to
+    // the strip about where it was: it would float clear of the name and land on
+    // the row above. Keeping them together means there is one thing to position,
+    // and whatever is right for the fixtures is right for the xP.
+    var bar = document.createElement('div');
+    bar.className = 'fplxp-bar';
+    if (badge) {
+      badge.classList.add('fplxp-badge--inline');
+      bar.appendChild(badge);
+    }
+    if (strip) {
+      strip.classList.add('fplxp-strip--inbar');
+      bar.appendChild(strip);
+    }
+
     if (inList) {
-      placeListBar(row, badge, strip, nameNode);
+      placeListBar(row, bar, nameNode);
     } else {
-      if (badge) {
-        // Sit the badge above the card when the name starts at its top edge,
-        // otherwise it covers the player's name. Falls back to looking for a
-        // shirt image when nothing can be measured.
-        var room = hasRoomAboveName(card, nameNode);
-        if (room === null) room = !!(card.querySelector && card.querySelector('img'));
-        if (!room) badge.classList.add('fplxp-badge--above');
-        card.appendChild(badge);
-      }
-      if (strip) {
-        card.appendChild(strip);
-        placeStrip(card, strip, nameNode);
-      }
+      card.appendChild(bar);
+      placeBar(card, bar, nameNode);
     }
 
     card.setAttribute(ANNOTATED, String(player.id));
@@ -633,17 +616,8 @@
    * height, which works whether or not its height was otherwise fixed, and is
    * undone by clearAnnotations().
    */
-  function placeListBar(row, badge, strip, nameNode) {
-    var bar = document.createElement('div');
-    bar.className = 'fplxp-bar';
-    if (badge) {
-      badge.classList.add('fplxp-badge--inline');
-      bar.appendChild(badge);
-    }
-    if (strip) {
-      strip.classList.add('fplxp-strip--inbar');
-      bar.appendChild(strip);
-    }
+  function placeListBar(row, bar, nameNode) {
+    bar.classList.add('fplxp-bar--inrow');
     row.appendChild(bar);
 
     if (!row.getBoundingClientRect) return;

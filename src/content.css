@@ -21,16 +21,6 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
-/* When the name starts at the card's top edge, lift the badge just clear of it
-   so it sits over the shirt above rather than across the player's name. The
-   negative margin keeps it touching the card, so it still reads as belonging to
-   this player and not the one above. */
-.fplxp-badge--above {
-  top: auto;
-  bottom: 100%;
-  margin-bottom: -1px;
-}
-
 .fplxp-badge--elite { background: #00ff87; color: #37003c; }
 .fplxp-badge--good  { background: #05f0ff; color: #37003c; }
 .fplxp-badge--ok    { background: #ffffff; color: #37003c; }
@@ -65,17 +55,6 @@
   line-height: 1;
 }
 
-/* Tucked over the bottom of the shirt when the gap below is clipped. `bottom` is
-   set from measured geometry in placeStrip(). */
-.fplxp-strip--inside {
-  top: auto;
-  margin-top: 0;
-}
-
-/* Sitting on the kit rather than clean background, so lift the chips off it. */
-.fplxp-strip--inside .fplxp-chip {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
-}
 
 .fplxp-chip {
   flex: 1 1 auto;
@@ -108,14 +87,37 @@
    position line. `left` is set from measured geometry in placeListBar(). */
 .fplxp-bar {
   position: absolute;
-  left: 0;
-  bottom: 1px;
+  left: 1px;
+  right: 1px;
+  top: 100%;
+  margin-top: 1px;
   z-index: 20;
   display: flex;
   align-items: center;
   gap: 4px;
   line-height: 1;
   pointer-events: auto;
+}
+
+/* Inside a list row, in the space the row was grown to make. `left` is set from
+   measured geometry in placeListBar(). */
+.fplxp-bar--inrow {
+  top: auto;
+  right: auto;
+  bottom: 1px;
+  margin-top: 0;
+}
+
+/* Tucked over the bottom of the shirt when the gap below a pitch card cannot be
+   unclipped. `bottom` is set from measured geometry in placeBar(). */
+.fplxp-bar--inside {
+  top: auto;
+  margin-top: 0;
+}
+
+.fplxp-bar--inside .fplxp-chip,
+.fplxp-bar--inside .fplxp-badge {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
 }
 
 .fplxp-badge--inline {

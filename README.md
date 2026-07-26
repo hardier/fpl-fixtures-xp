@@ -18,12 +18,11 @@ A popup also shows your squad’s xP breakdown and a league‑wide **Top xP** ta
 ## Usage
 
 - **Overlay** – visit `https://fantasy.premierleague.com`.  
-  Every player card gets an xP badge and a colour‑coded fixture strip along the
-  bottom. Hover either one for a breakdown. Both positions are measured at
-  runtime rather than fixed: the badge takes the card's top‑right corner when
-  there is room above the player's name and sits just above the card otherwise,
-  and the strip stays in the gap below the card, lifting any clipping that would
-  cut it off.
+  Every player gets a single bar under them holding the xP and a colour‑coded
+  strip of their next fixtures. Hover either for a breakdown. The bar sits in the
+  gap below a pitch card, lifting any clipping that would cut it off, and inside
+  a player list it goes in space the row is grown to make, so it never covers
+  FPL's own content.
 - **Popup** – click the toolbar icon.  
   The popup has three tabs:
 
