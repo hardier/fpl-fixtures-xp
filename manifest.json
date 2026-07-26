@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FPL Squad Selection Helper",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Adds the next 5 fixtures (colour-coded by FDR) and an expected-points estimate for the current gameweek to every FPL player.",
   "permissions": ["storage"],
   "host_permissions": ["https://fantasy.premierleague.com/*"],

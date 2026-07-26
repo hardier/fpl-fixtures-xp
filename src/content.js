@@ -532,8 +532,12 @@
   function findListRow(card) {
     if (!card.getBoundingClientRect) return null;
 
+    // Walks as far as findCard does. Three levels was not enough: FPL nests the
+    // name several elements deep inside a row, so the row was never reached and
+    // the whole row got treated as a pitch card — which is why the list toggles
+    // looked dead and the bar landed on the divider between players.
     var el = card;
-    for (var i = 0; i < 3 && el && el !== document.body; i++) {
+    for (var i = 0; i < MAX_WALK_UP && el && el !== document.body; i++) {
       var r = el.getBoundingClientRect();
       if (r.height && r.height <= LIST_MAX_HEIGHT &&
           r.width >= LIST_MIN_WIDTH && r.width > r.height * 2) {
@@ -617,12 +621,17 @@
       bar.appendChild(strip);
     }
 
-    if (inList) {
-      placeListBar(row, bar, nameNode);
-    } else {
-      if (corner) card.appendChild(badge);
-      card.appendChild(bar);
-      placeBar(card, bar, nameNode);
+    if (corner) card.appendChild(badge);
+
+    // With the badge in the corner and the fixtures switched off there is nothing
+    // left for the bar to hold.
+    if (bar.children.length) {
+      if (inList) {
+        placeListBar(row, bar, nameNode);
+      } else {
+        card.appendChild(bar);
+        placeBar(card, bar, nameNode);
+      }
     }
 
     card.setAttribute(ANNOTATED, String(player.id));
@@ -653,9 +662,9 @@
 
     var barHeight = bar.getBoundingClientRect().height || 13;
     row.classList.add('fplxp-grown');
-    // Enough for the bar plus clear air above and below it, so it neither
-    // touches FPL's club-and-position line nor the next player's name.
-    row.style.minHeight = Math.ceil(rowRect.height + barHeight + 10) + 'px';
+    // Enough for the bar plus clear air above and below it, so it touches
+    // neither FPL's club-and-position line nor the divider under the row.
+    row.style.minHeight = Math.ceil(rowRect.height + barHeight + 16) + 'px';
 
     // Line the bar up with the name rather than the row's left edge, which is
     // usually an info icon or a shirt.
@@ -923,6 +932,7 @@
             candidates: h.candidates.length,
             exact: h.exact,
             evidence: found ? found.evidence : null,
+            treatedAsListRow: !!(card && findListRow(card)),
             cardTag: card ? card.tagName + '.' + (card.className || '').split(' ')[0] : null,
             cardText: card ? (card.textContent || '').slice(0, 60) : null,
             opponentTokens: card ? opponentTokens(normalise(cardText(card) || '')) : []

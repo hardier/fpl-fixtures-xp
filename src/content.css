@@ -104,9 +104,9 @@
 .fplxp-bar--inrow {
   top: auto;
   right: auto;
-  /* Lifted clear of the row's lower edge so the next player's name below has
-     air beneath it; the row is grown to match. */
-  bottom: 6px;
+  /* Lifted clear of the row's lower edge, which carries FPL's divider line
+     between players; the row is grown to match. */
+  bottom: 10px;
   margin-top: 0;
 }
 
