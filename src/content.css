@@ -104,7 +104,9 @@
 .fplxp-bar--inrow {
   top: auto;
   right: auto;
-  bottom: 1px;
+  /* Lifted clear of the row's lower edge so the next player's name below has
+     air beneath it; the row is grown to match. */
+  bottom: 6px;
   margin-top: 0;
 }
 

@@ -24,6 +24,8 @@
   var MAX_WALK_UP = 6;
   // Text longer than this cannot be a single player's card.
   var CARD_TEXT_MAX = 160;
+  // Vertical room needed above the name before a corner badge is safe.
+  var BADGE_CLEARANCE = 14;
   // Most opponents one card can legitimately show: two, for a double gameweek.
   var MAX_CARD_FIXTURES = 2;
   // Narrowest a player list row gets; a pitch card stays about shirt-width.
@@ -496,6 +498,25 @@
    * list and the pitch without depending on FPL's class names.
    */
   /**
+   * Is there room above the player's name inside the card for a corner badge?
+   *
+   * Measured rather than inferred, because which element ends up being the card
+   * is not under our control: sometimes it is the full card with the shirt on
+   * top, which leaves the corner free, and sometimes only FPL's name plate, where
+   * a corner badge would land on the name.
+   */
+  function hasRoomAboveName(card, nameNode) {
+    var nameEl = nameNode && nameNode.parentElement;
+    if (!nameEl || !card.getBoundingClientRect) return null;
+
+    var cardRect = card.getBoundingClientRect();
+    var nameRect = nameEl.getBoundingClientRect();
+    if (!cardRect.height || !nameRect.height) return null;
+
+    return (nameRect.top - cardRect.top) >= BADGE_CLEARANCE;
+  }
+
+  /**
    * The list row this card belongs to, or null if it is not in a list.
    *
    * Searches upwards rather than testing the card itself: the element the name
@@ -575,14 +596,19 @@
         .forEach(function (chip) { strip.appendChild(makeChip(chip)); });
     }
 
-    // One element holding both, always. They used to be placed separately, and
-    // every remaining overlap came from the badge getting a different answer to
-    // the strip about where it was: it would float clear of the name and land on
-    // the row above. Keeping them together means there is one thing to position,
-    // and whatever is right for the fixtures is right for the xP.
+    // On a pitch card the badge goes in the top-right corner, over the empty part
+    // of the shirt. In a list row there is no such space, and a badge placed on
+    // its own there ends up on the row above — so there it shares one bar with
+    // the fixtures. Same for a bare name plate with no room above the name.
+    var corner = false;
+    if (badge && !inList) {
+      corner = hasRoomAboveName(card, nameNode);
+      if (corner === null) corner = !!(card.querySelector && card.querySelector('img'));
+    }
+
     var bar = document.createElement('div');
     bar.className = 'fplxp-bar';
-    if (badge) {
+    if (badge && !corner) {
       badge.classList.add('fplxp-badge--inline');
       bar.appendChild(badge);
     }
@@ -594,6 +620,7 @@
     if (inList) {
       placeListBar(row, bar, nameNode);
     } else {
+      if (corner) card.appendChild(badge);
       card.appendChild(bar);
       placeBar(card, bar, nameNode);
     }
@@ -626,7 +653,9 @@
 
     var barHeight = bar.getBoundingClientRect().height || 13;
     row.classList.add('fplxp-grown');
-    row.style.minHeight = Math.ceil(rowRect.height + barHeight + 2) + 'px';
+    // Enough for the bar plus clear air above and below it, so it neither
+    // touches FPL's club-and-position line nor the next player's name.
+    row.style.minHeight = Math.ceil(rowRect.height + barHeight + 10) + 'px';
 
     // Line the bar up with the name rather than the row's left edge, which is
     // usually an info icon or a shirt.
