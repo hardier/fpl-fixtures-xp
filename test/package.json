@@ -1,0 +1,12 @@
+{
+  "name": "fpl-squad-selection-helper-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "data": "node fetch-data.mjs",
+    "test": "for f in *.test.mjs; do echo \"--- $f\"; node \"$f\" || exit 1; done"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.0"
+  }
+}

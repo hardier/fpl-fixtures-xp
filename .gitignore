@@ -12,4 +12,5 @@ fixtures.json
 
 # Tooling
 node_modules/
+test/package-lock.json
 *.log

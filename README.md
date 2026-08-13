@@ -138,6 +138,18 @@ There is no build step — the extension is plain ES5-compatible JavaScript, so
 `Load unpacked` reloads pick up edits directly. After editing `src/background.js`
 hit the reload icon on `chrome://extensions` to restart the service worker.
 
+### Tests
+
+The suite drives the real content script over jsdom, using live API payloads so
+player names, fixtures and difficulty ratings are the actual ones:
+
+```bash
+cd test
+npm install
+npm run data   # downloads bootstrap-static and fixtures snapshots
+npm test
+```
+
 The model in `src/xp.js` is deliberately free of DOM and extension APIs so it can
 be exercised headlessly against a snapshot of the real API:
 

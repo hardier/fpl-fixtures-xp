@@ -60,6 +60,10 @@
     fixtureCount: 5
   };
   var scheduled = null;
+  // Elements this copy of the extension annotated, so a second installed copy
+  // can be told apart from our own work.
+  var ours = typeof WeakSet === 'function' ? new WeakSet() : null;
+  var warnedForeign = false;
 
   var debug = {
     ready: false,
@@ -68,6 +72,7 @@
     nameHits: 0,
     cardsRejected: 0,
     skippedPage: null,
+    foreignAnnotations: 0,
     lastError: null
   };
 
@@ -562,7 +567,7 @@
     var wantFixtures = inList ? settings.showFixturesList : settings.showFixtures;
 
     if (!wantXp && !wantFixtures) {
-      card.setAttribute(ANNOTATED, String(player.id));
+      markOurs(card, player.id);
       return;
     }
 
@@ -634,7 +639,12 @@
       }
     }
 
-    card.setAttribute(ANNOTATED, String(player.id));
+    markOurs(card, player.id);
+  }
+
+  function markOurs(card, playerId) {
+    card.setAttribute(ANNOTATED, String(playerId));
+    if (ours) ours.add(card);
   }
 
   /**
@@ -678,9 +688,24 @@
   // --------------------------------------------------------------------- scan
 
   function alreadyHandled(card) {
-    if (card.hasAttribute(ANNOTATED)) return true;
-    if (card.querySelector('[' + ANNOTATED + ']')) return true;
-    return !!card.closest('[' + ANNOTATED + ']');
+    var mark = card.hasAttribute(ANNOTATED) ? card
+      : (card.querySelector('[' + ANNOTATED + ']') || card.closest('[' + ANNOTATED + ']'));
+    if (!mark) return false;
+
+    // Marked, but not by us: a second copy of the extension is installed and got
+    // here first. Its settings are separate from ours, so toggles in this copy's
+    // popup appear to do nothing — the other copy keeps drawing. Worth saying out
+    // loud, because it is otherwise indistinguishable from a bug in here.
+    if (ours && !ours.has(mark)) {
+      debug.foreignAnnotations++;
+      if (!warnedForeign) {
+        warnedForeign = true;
+        console.warn(TAG, 'this page is already annotated by another copy of the ' +
+          'extension. Check chrome://extensions for a duplicate — settings are ' +
+          'per-copy, so changes here may appear to have no effect.');
+      }
+    }
+    return true;
   }
 
   /**
