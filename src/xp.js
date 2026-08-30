@@ -308,15 +308,20 @@
     });
 
     if (!maxPlayed) {
-      // `played` can lag early on, so fall back to finished gameweeks. And in
-      // the off-season nothing has been played at all while `minutes` still
-      // holds last season's totals — those need a full 38-game denominator or
-      // every squad player looks nailed to start.
+      // `played` can lag, or sit at 0 while `minutes` still holds last season's
+      // totals. Take the larger of the finished gameweeks and what the minutes
+      // themselves imply: the busiest player in the game has played about every
+      // minute available, so their total over 90 is roughly the games so far.
+      // Without this, carried-over minutes divided by one finished gameweek make
+      // every squad player look nailed on for 90.
       var finished = bootstrap.events.filter(function (e) { return e.finished; }).length;
-      var carryOverMinutes = !finished && bootstrap.elements.some(function (p) {
-        return num(p.minutes) > 0;
+      var maxMinutes = 0;
+      bootstrap.elements.forEach(function (p) {
+        var m = num(p.minutes);
+        if (m > maxMinutes) maxMinutes = m;
       });
-      var fallback = finished || (carryOverMinutes ? 38 : 0);
+      var impliedGames = Math.ceil(maxMinutes / 90);
+      var fallback = Math.max(finished, impliedGames);
       bootstrap.teams.forEach(function (t) { gamesPlayed[t.id] = fallback; });
     }
 
@@ -359,10 +364,23 @@
   }
 
   /**
-   * The gameweek the user is currently interested in: the live one if a
-   * gameweek is in progress, otherwise the one they are picking for.
+   * The gameweek to project: the next one whose deadline has not passed.
+   *
+   * That is the one still worth advice, since the team for it can still be
+   * changed. Targeting the live gameweek instead looks reasonable but is close to
+   * useless once it is under way: finished fixtures are dropped from the table
+   * this reads, so every player whose match has already been played scores zero,
+   * which mid-gameweek is nearly all of them.
    */
   function currentGameweek(events) {
+    var now = Date.now();
+
+    var upcoming = events.find(function (e) {
+      return !e.finished && new Date(e.deadline_time).getTime() > now;
+    });
+    if (upcoming) return upcoming.id;
+
+    // Every deadline has passed: fall back to whatever is still running.
     var live = events.find(function (e) { return e.is_current && !e.finished; });
     if (live) return live.id;
     var next = events.find(function (e) { return e.is_next; });
